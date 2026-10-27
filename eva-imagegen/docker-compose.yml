@@ -1,0 +1,26 @@
+# Variante « compose » (si le plugin docker compose est installé). Le plus simple et le plus proche de ton installation
+# (ia-local-automatique) est le script :  sudo bash install-imagegen.sh   (voir IMAGES.md).
+# Réseau hôte, comme Open WebUI : Ollama (127.0.0.1:11434) est joignable même s'il n'écoute que en local.
+services:
+  eva-imagegen:
+    build: .
+    container_name: eva-imagegen
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - IMAGEGEN_PORT=${IMAGEGEN_PORT:-7860}
+      - IMAGEGEN_MODEL=${IMAGEGEN_MODEL:-stabilityai/sd-turbo}
+      - IMAGEGEN_IDLE_UNLOAD=${IMAGEGEN_IDLE_UNLOAD:-90}
+      - IMAGEGEN_OLLAMA_URL=${IMAGEGEN_OLLAMA_URL:-http://127.0.0.1:11434}
+      - IMAGEGEN_TOKEN=${IMAGEGEN_TOKEN:-}
+      - IMAGEGEN_VIDEO=${IMAGEGEN_VIDEO:-0}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

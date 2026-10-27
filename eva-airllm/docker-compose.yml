@@ -1,0 +1,30 @@
+# À lancer sur la machine qui a le GPU (ton serveur IA 192.168.1.20), pas sur le NAS :
+#   cd eva-airllm && docker compose up -d --build
+# Puis, sur le NAS, dans /home/eva/eva/.env :  EVA_AIRLLM_URL=http://192.168.1.20:8200   (et docker compose up -d)
+# Prérequis : pilote NVIDIA + NVIDIA Container Toolkit, et du disque (voir AIRLLM_MODEL ci-dessous).
+# Modèles conseillés pour une GTX 1060 6 Go (le plus petit est le plus supportable) :
+#   Qwen/Qwen2.5-32B-Instruct   (~18 Go en 4 bits : compte ~10 à 30 s par mot sur SSD NVMe)
+#   Qwen/Qwen2.5-72B-Instruct   (~40 Go en 4 bits : plusieurs minutes par mot sur disque dur)
+services:
+  eva-airllm:
+    build: .
+    container_name: eva-airllm
+    restart: unless-stopped
+    ports:
+      - "8200:8200"
+    environment:
+      - AIRLLM_MODEL=${AIRLLM_MODEL:-Qwen/Qwen2.5-32B-Instruct}
+      - AIRLLM_COMPRESSION=${AIRLLM_COMPRESSION:-4bit}
+      - AIRLLM_MAX_NEW_TOKENS=${AIRLLM_MAX_NEW_TOKENS:-200}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - AIRLLM_RAM_CACHE=${AIRLLM_RAM_CACHE:-1}
+      - AIRLLM_RAM_CACHE_GB=${AIRLLM_RAM_CACHE_GB:-0}
+    volumes:
+      - ${AIRLLM_MODELS_DIR:-./models}:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

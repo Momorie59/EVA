@@ -1,0 +1,67 @@
+# Paperless-ngx pour EVA : OCR et archivage des papiers (voir PAPIERS.md).
+# Tout le reste (dossiers surveillés, analyse, échéances, alertes) est fait par EVA : pas de conteneur « majordome » ni de ntfy.
+# Les valeurs viennent du .env du dossier où tourne Paperless (créé par l'installateur du majordome) : rien à changer.
+
+name: majordome
+
+services:
+  broker:
+    image: docker.io/library/redis:7
+    restart: unless-stopped
+    volumes:
+      - ${DATA_ROOT}/redis:/data
+
+  db:
+    image: docker.io/library/postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/postgres:/var/lib/postgresql/data
+
+  gotenberg:   # conversion des pièces jointes Office / mails en PDF
+    image: docker.io/gotenberg/gotenberg:8
+    restart: unless-stopped
+    command: ["gotenberg", "--chromium-disable-javascript=true", "--chromium-allow-list=file:///tmp/.*"]
+
+  tika:        # extraction de texte des documents Office et des mails
+    image: docker.io/apache/tika:latest
+    restart: unless-stopped
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on: [db, broker, gotenberg, tika]
+    ports:
+      - "${PAPERLESS_PORT:-8000}:8000"
+    volumes:
+      - ${DATA_ROOT}/paperless/data:/usr/src/paperless/data
+      - ${DATA_ROOT}/paperless/media:/usr/src/paperless/media
+      - ${DATA_ROOT}/paperless/export:/usr/src/paperless/export
+      # Dossier d'arrivée interne : c'est EVA qui surveille tes dossiers de dépôt et envoie les fichiers à Paperless.
+      # (Avant, Paperless surveillait lui-même a-classer : EVA le fait maintenant, sinon chaque fichier entrerait deux fois.)
+      - ${DATA_ROOT}/consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBPASS: ${POSTGRES_PASSWORD}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: ${PAPERLESS_PUBLIC_URL}
+      PAPERLESS_TIME_ZONE: Europe/Paris
+      PAPERLESS_OCR_LANGUAGE: fra+ita
+      PAPERLESS_OCR_LANGUAGES: "fra ita"
+      PAPERLESS_OCR_MODE: skip
+      PAPERLESS_CONSUMER_RECURSIVE: "true"
+      PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: "true"
+      PAPERLESS_CONSUMER_POLLING: ${CONSUMER_POLLING:-0}
+      PAPERLESS_TASK_WORKERS: 1          # adapté à l'A6/A10 du M715q
+      PAPERLESS_THREADS_PER_WORKER: 2
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      USERMAP_UID: ${PUID:-1000}
+      USERMAP_GID: ${PGID:-100}

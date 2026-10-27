@@ -1,0 +1,39 @@
+# Mode « vrai certificat » — choisi avec ./eva-https.sh domain <nom>.duckdns.org <jeton>
+# https://<nom>.duckdns.org:8443/ est reconnu par tous les navigateurs et téléphones, sans rien installer.
+# L'accès par l'adresse IP du NAS continue de fonctionner (avec l'avertissement habituel).
+{
+	skip_install_trust
+	auto_https disable_redirects
+	on_demand_tls {
+		ask http://eva-core:8000/api/https/ask
+	}
+}
+
+{$EVA_DOMAIN}:{$EVA_HTTPS_PORT:8443} {
+	tls {
+		dns duckdns {$DUCKDNS_TOKEN}
+	}
+	import eva_routes
+}
+
+:{$EVA_HTTPS_PORT:8443} {
+	tls internal {
+		on_demand
+	}
+	import eva_routes
+}
+
+(eva_routes) {
+	handle /ws/chat* {
+		reverse_proxy eva-core:8000
+	}
+	handle /api/* {
+		reverse_proxy eva-core:8000
+	}
+	handle_path /voice/* {
+		reverse_proxy eva-voice:8100
+	}
+	handle {
+		reverse_proxy eva-interface:80
+	}
+}

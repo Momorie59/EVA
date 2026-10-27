@@ -1,0 +1,74 @@
+SATELLITES VOCAUX D'EVA
+=======================
+
+Un satellite = un micro + un haut-parleur dans une pièce, qui écoute « EVA… » et répond à voix haute.
+Matériel conseillé : Raspberry Pi 3/4/5 avec un micro USB (ou un ReSpeaker) et une petite enceinte,
+ou n'importe quel PC / portable Linux, Windows ou Mac.
+
+1. Dans EVA : Maison › Satellites › « Ajouter un satellite » (nom, pièce, compte : ses droits s'appliquent), ou « Installer /
+   Réinstaller » sur un satellite existant. Choisis le système (Windows, Mac, Linux / Raspberry Pi) et les options.
+2. Sur la machine du satellite :
+   - Windows : double-clique sur le fichier Installer-EVA-….cmd téléchargé (Python s'installe tout seul s'il manque).
+     « Windows a protégé votre ordinateur » : Informations complémentaires › Exécuter quand même.
+   - Mac : colle la commande affichée dans le Terminal. Accepte le micro ; pour l'écran, autorise Python dans
+     Réglages Système › Confidentialité et sécurité (Enregistrement de l'écran, Accessibilité, Caméra).
+   - Linux / Raspberry Pi : colle la commande affichée dans un terminal.
+   - Android : installe l'appli EVA Satellite puis touche « Ouvrir dans l'appli » (ou scanne le QR code).
+   Le satellite se met ensuite à jour TOUT SEUL à chaque nouvelle version d'EVA (au démarrage, puis toutes les 6 h).
+   Durée : Windows / Mac 5 à 10 min, Linux 3 à 8 min, Raspberry Pi 10 à 20 min, Android 1 à 2 min (+ options écran / gestes).
+
+PAUSE : Maison › Satellites › Pause dans EVA, raccourcis « EVA pause » / « EVA reprise » sur le bureau, ou « EVA, pause ».
+DÉSINSTALLER : Supprimer dans Maison › Satellites (allumé, il se désinstalle seul). Sinon, sur la machine :
+   Windows : desinstaller.cmd dans le dossier eva-satellite ; Linux / Mac : bash ~/eva-satellite/desinstaller.sh ;
+   Android : appui long sur l'icône › Désinstaller.
+3. Parle : « EVA, allume la lumière », « EVA, qui est à la maison ? », « EVA, c'est quoi cette musique ? ».
+   « EVA » seul : un bip, puis tu as 8 secondes pour parler.
+   Si EVA doit faire quelque chose de sensible, elle demande « Tu confirmes ? » : réponds « oui » ou « non ».
+
+Mot d'éveil sur le satellite (comme openWakeWord chez Jarvis) : ajoute « local » à la fin de la commande d'installation
+(Linux : bash installer.sh https://… evasat_… local ; Windows : -Eveil local). Rien ne part vers le NAS tant que « EVA » n'est pas
+entendu par le satellite lui-même ; Whisper confirme ensuite. Si EVA ne t'entend pas assez, monte "sensibilite_eveil" (0 à 1,
+0,5 par défaut) dans satellite.json ; si elle se déclenche trop, baisse-la. Pour revenir à l'ancien mode : "eveil": "whisper".
+
+Annonces et pilotage de l'ordinateur (comme Jarvis) :
+   « EVA, annonce dans la cuisine que le dîner est prêt » → le satellite de la cuisine le dit à voix haute (« partout » = tous).
+   Sur un PC : « EVA, ouvre Spotify sur le PC du bureau », « baisse le son », « mets en pause », « verrouille l'ordinateur »,
+   « état du PC », « éteins l'ordinateur » (accord demandé, dans 1 minute, annulable). Seules les applis de la liste
+   "applis" de satellite.json peuvent être lancées, par ex. : "applis": {"jeu": "C:\\Jeux\\jeu.exe", "chrome": "start chrome"}.
+   « C'est quoi la musique sur l'ordinateur ? » : règle "source_musique" (Linux : « Monitor of … », Windows : « Mixage stéréo »
+   activé dans Paramètres du son ; numéro donné par --liste-audio). Pour interdire le pilotage : "pc": false.
+
+« Mon Chrome EVA » (comme le vrai Chrome de Jarvis) : « EVA, ouvre le site de la SNCF sur mon PC », « résume la page ouverte »,
+   « quels onglets sont ouverts ? ». EVA ouvre un Chrome VISIBLE avec un profil à elle (dossier .eva-chrome) : connecte-toi une fois
+   à tes sites dans cette fenêtre, ça reste. Lire et ouvrir : libre. Cliquer et remplir : ton accord à chaque fois ; jamais sur la
+   banque, les impôts, la santé ou les organismes (lecture seule) ; jamais un mot de passe, un code ou une carte bancaire.
+
+Fenêtre flottante sur un PC (comme Jarvis) : ajoute "fenetre": true dans satellite.json. Une petite fenêtre toujours au
+   premier plan (sans prendre le clavier) montre ce que tu as dit et la réponse d'EVA, puis s'efface (clic = fermer).
+   "fenetre_position": "bas-droite" (ou "haut-droite", "bas-gauche", "haut-gauche", ou [x, y] pour un 2e écran, ex. [2200, 900]),
+   "fenetre_duree": 15 (secondes). Mode silencieux : « EVA, mode silencieux » (répond seulement dans la fenêtre),
+   « EVA, reparle » pour revenir ; ou "silencieux": true au démarrage.
+
+Réponse plus rapide (comme Jarvis) : EVA commence à parler dès la première phrase prête, au lieu d'attendre la réponse entière,
+   et si une recherche prend du temps elle le dit tout de suite (« Je regarde la météo. »). Rien à régler.
+
+Plusieurs satellites qui entendent la même phrase : seul celui qui t'entend le mieux répond (les autres se taisent).
+
+Options d'un PC (Windows : ajoute-les à la commande d'installation ; Linux : à la fin de bash installer.sh … evasat_…) :
+   Fenêtre flottante     -Fenetre   / fenetre   (voir plus bas)
+   Tableau au repos      -Tableau   / tableau   quand tu ne parles pas à EVA, la fenêtre affiche l'heure, la météo, tes prochains
+                                               rendez-vous, tes colis, la musique en cours et les post-its (clic = caché 30 min).
+   Écran                 -Ecran     / ecran     « EVA, qu'est-ce qu'il y a sur mon écran ? », « lis-moi ce message d'erreur »,
+                                               « clique sur Envoyer » (toujours avec ton accord ; jamais sur la banque, les impôts,
+                                               la santé). La capture n'est jamais gardée ; le texte est lu sur le PC même.
+   Gestes (webcam)       -Gestes    / gestes    main ouverte immobile = lecture/pause ; poing = EVA se tait ;
+                                               2 doigts = mode onglets (main à gauche/droite : onglet, en haut/bas : page) ;
+                                               3 doigts = mode audio (haut/bas : volume, gauche/droite : piste) ;
+                                               index seul = mode souris (l'index guide le pointeur, poing pour sortir) ;
+                                               deux mains ouvertes = zoom ; pouce levé / baissé = « oui » / « non » à EVA.
+                                               L'image ne quitte jamais le PC. Autre webcam : "camera": 1. Clic par pincement : "gestes_clic": true.
+   Exemple Windows : powershell -ExecutionPolicy Bypass -File installer.ps1 -Eva https://… -Jeton evasat_… -Fenetre -Tableau -Ecran -Gestes
+   Exemple Linux   : bash installer.sh https://… evasat_… fenetre tableau ecran gestes
+
+Réglages (satellite.json) : "micro" et "haut_parleur" (numéros de --liste-audio), "seuil" (sensibilité du micro).
+Supprimer le satellite dans EVA coupe immédiatement son accès.

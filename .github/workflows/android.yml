@@ -1,0 +1,53 @@
+name: Appli satellite Android
+
+on:
+  push:
+    paths:
+      - "eva-android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      # Clé de signature : secrets du dépôt EVA_KEYSTORE_B64 (fichier .jks en base64) et EVA_KEYSTORE_PASSWORD.
+      # Sans eux (fork), l'APK est signée avec une clé de débogage et n'est pas rangée dans EVA.
+      - name: Clé de signature
+        env:
+          CLE: ${{ secrets.EVA_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$CLE" ]; then echo "$CLE" | base64 -d > eva-android/app/eva-satellite.jks; echo "SIGNEE=1" >> "$GITHUB_ENV"; fi
+      - name: Compiler l'APK
+        working-directory: eva-android
+        env:
+          EVA_KEYSTORE_PASSWORD: ${{ secrets.EVA_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eva-satellite-apk
+          path: eva-android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+      - name: Ranger l'APK dans EVA (servie aux téléphones par /api/public/satellite/eva-satellite.apk)
+        if: env.SIGNEE == '1' && github.repository_owner == 'Momorie59'
+        run: |
+          rm -f eva-android/app/eva-satellite.jks
+          cp eva-android/app/build/outputs/apk/release/app-release.apk eva-core/app/data/satellite/eva-satellite.apk
+          grep -oP 'val versionEva = \K[0-9]+' eva-android/app/build.gradle.kts > eva-core/app/data/satellite/android-version.txt
+          git config user.name "EVA (compilation Android)"
+          git config user.email "actions@users.noreply.github.com"
+          git add eva-core/app/data/satellite/eva-satellite.apk eva-core/app/data/satellite/android-version.txt
+          git commit -m "APK du satellite Android (compilation automatique)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main

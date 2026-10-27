@@ -1,0 +1,171 @@
+services:
+  eva-db:
+    image: postgres:16-alpine
+    container_name: eva-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-eva}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-eva}
+      - POSTGRES_DB=${POSTGRES_DB:-eva}
+    volumes:
+      - eva-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eva}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Repli quand le serveur IA local (Ollama) n'est pas disponible : très gros modèle, lent, sans outils.
+  # Rien n'est téléchargé tant qu'il n'est pas utilisé. GPU NVIDIA si le conteneur y a accès, sinon processeur (très lent).
+  eva-airllm:
+    build: ./eva-airllm
+    container_name: eva-airllm
+    restart: unless-stopped
+    environment:
+      - AIRLLM_MODEL=${AIRLLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      - AIRLLM_COMPRESSION=${AIRLLM_COMPRESSION:-4bit}
+      - AIRLLM_MAX_NEW_TOKENS=${AIRLLM_MAX_NEW_TOKENS:-256}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - AIRLLM_RAM_CACHE=${AIRLLM_RAM_CACHE:-1}
+      - AIRLLM_RAM_CACHE_GB=${AIRLLM_RAM_CACHE_GB:-0}
+    volumes:
+      - ./eva-airllm/models:/models
+
+  eva-core:
+    build: ./eva-core
+    container_name: eva-core
+    restart: unless-stopped
+    depends_on:
+      eva-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # IP réelle du serveur IA sur le réseau local (où tourne Ollama)
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://192.168.1.50:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - EVA_MODELE_RAPIDE=${EVA_MODELE_RAPIDE:-llama3.2:3b}
+      - EVA_VISION_MODEL=${EVA_VISION_MODEL:-llava}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-eva}:${POSTGRES_PASSWORD:-eva}@eva-db:5432/${POSTGRES_DB:-eva}
+      - EVA_WORKSPACE=/eva-workspace
+      - EVA_AIRLLM_URL=${EVA_AIRLLM_URL:-http://eva-airllm:8200}
+      - EVA_AIRLLM_FALLBACK=${EVA_AIRLLM_FALLBACK:-0}
+      - EVA_AUTH_TOKEN=${EVA_AUTH_TOKEN:-}
+      - EVA_SCANNER_URL=${EVA_SCANNER_URL:-http://host.docker.internal:8300}
+      - EVA_IMAGEGEN_URL=${EVA_IMAGEGEN_URL:-}
+      # Papiers (voir PAPIERS.md) : tout se règle aussi dans la page Papiers d'EVA
+      - EVA_PAPERLESS_URL=${EVA_PAPERLESS_URL:-}
+      - EVA_PAPERLESS_PUBLIC_URL=${EVA_PAPERLESS_PUBLIC_URL:-}
+      - EVA_PAPERLESS_TOKEN=${EVA_PAPERLESS_TOKEN:-}
+      - EVA_PAPIERS_DOSSIERS=${EVA_PAPIERS_DOSSIERS:-}
+      - EVA_PAPIERS_RACINE=/papiers
+      - EVA_PAPIERS_RACINE_NAS=${EVA_PAPIERS_RACINE_NAS:-/home/eva}
+      - EVA_PAPIERS_HEURE=${EVA_PAPIERS_HEURE:-8}
+      - EVA_SCANNER_TOKEN=${EVA_SCANNER_TOKEN:-}
+      - EVA_DEFAULT_CITY=${EVA_DEFAULT_CITY:-Paris}
+      - EVA_PROPRIETAIRE=${EVA_PROPRIETAIRE:-}
+      - EVA_SELF_DIR=/eva-self
+      - EVA_TIMEZONE=${EVA_TIMEZONE:-Europe/Paris}
+      - EVA_EMBED_MODEL=${EVA_EMBED_MODEL:-nomic-embed-text}
+      - EVA_GPU_WATTS=${EVA_GPU_WATTS:-200}
+      - EVA_KWH_PRICE=${EVA_KWH_PRICE:-0.25}
+      - EVA_CPU_THRESHOLD=${EVA_CPU_THRESHOLD:-90}
+      - EVA_MEMORY_THRESHOLD=${EVA_MEMORY_THRESHOLD:-90}
+      - EVA_DISK_THRESHOLD=${EVA_DISK_THRESHOLD:-90}
+    volumes:
+      - eva-workspace:/eva-workspace
+      # Copie modifiable du code d'EVA (propositions validées par toi, page Évolution)
+      - eva-self:/eva-self
+      # Donne accès en lecture à Docker pour docker_ps / docker_logs.
+      # Même en lecture seule côté bind mount, le socket Docker reste un
+      # accès puissant (équivalent à root sur l'hôte) — ne l'expose qu'à
+      # un service de confiance. Voir eva-core/README.md.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Dossier du NAS où EVA peut choisir les dossiers de papiers à surveiller (page Papiers › Réglages).
+      - ${EVA_PAPIERS_RACINE_NAS:-/home/eva}:/papiers
+
+  eva-voice:
+    build: ./eva-voice
+    container_name: eva-voice
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-small}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-auto}
+      - WHISPER_COMPUTE_TYPE=${WHISPER_COMPUTE_TYPE:-}
+      - EVA_VOICES_DIR=/voices
+      - PIPER_VOICE=${PIPER_VOICE:-fr_FR-siwis-medium}
+      # Langues : Whisper détecte la langue parlée ; les voix des autres langues se téléchargent toutes seules
+      - WHISPER_LANGUAGE=${WHISPER_LANGUAGE:-auto}
+      - EVA_LANGUE=${EVA_LANGUE:-fr}
+      - PIPER_AUTO_DOWNLOAD=${PIPER_AUTO_DOWNLOAD:-1}
+      - EVA_AUTH_TOKEN=${EVA_AUTH_TOKEN:-}
+    volumes:
+      - ./eva-voice/models:/voices
+
+  eva-interface:
+    build:
+      context: ./eva-interface
+      args:
+        # Vides par défaut : l'interface utilise la même origine (Caddy route tout).
+        VITE_EVA_WS_URL: ${EVA_PUBLIC_WS_URL:-}
+        VITE_EVA_CORE_URL: ${EVA_PUBLIC_CORE_URL:-}
+        VITE_EVA_VOICE_URL: ${EVA_PUBLIC_VOICE_URL:-}
+        VITE_EVA_AUTH_TOKEN: ${EVA_AUTH_TOKEN:-}
+    container_name: eva-interface
+    restart: unless-stopped
+    depends_on:
+      - eva-core
+
+  # Détection des appareils de la maison : doit tourner en réseau « hôte » pour voir les adresses MAC, les diffusions UDP, mDNS et SSDP.
+  # Écoute sur le port 8300 du NAS ; seules les adresses privées (ou le jeton EVA_SCANNER_TOKEN) sont acceptées.
+  eva-scanner:
+    build: ./eva-scanner
+    container_name: eva-scanner
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - EVA_SCANNER_TOKEN=${EVA_SCANNER_TOKEN:-}
+      - EVA_AUTH_TOKEN=${EVA_AUTH_TOKEN:-}
+
+  # Génération d'images SUR LE NAS (processeur, lent) : facultatif, démarre seulement avec « docker compose --profile imagegen up -d --build ».
+  # Le mieux est de lancer eva-imagegen sur le serveur IA (GPU) : voir eva-imagegen/docker-compose.yml.
+  eva-imagegen:
+    profiles: ["imagegen"]
+    build: ./eva-imagegen
+    container_name: eva-imagegen
+    restart: unless-stopped
+    environment:
+      - IMAGEGEN_MODEL=${IMAGEGEN_MODEL:-stabilityai/sd-turbo}
+      - IMAGEGEN_IDLE_UNLOAD=${IMAGEGEN_IDLE_UNLOAD:-120}
+      - IMAGEGEN_TOKEN=${IMAGEGEN_TOKEN:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./eva-imagegen/models:/models
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: eva-caddy
+    restart: unless-stopped
+    depends_on:
+      - eva-core
+      - eva-voice
+      - eva-interface
+    environment:
+      - EVA_HOST=${EVA_HOST:-localhost}
+      - EVA_HTTPS_PORT=${EVA_HTTPS_PORT:-8443}
+    ports:
+      # Port 8443 (et non 443) : 80/443 sont utilisés par l'interface OMV
+      - "${EVA_HTTPS_PORT:-8443}:${EVA_HTTPS_PORT:-8443}"
+    volumes:
+      # EVA_CADDYFILE : ./caddy/Caddyfile (HTTPS, défaut) ou ./caddy/Caddyfile.http (HTTP) — voir ./eva-https.sh
+      - ${EVA_CADDYFILE:-./caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - eva-caddy-data:/data
+      - eva-caddy-config:/config
+
+volumes:
+  eva-caddy-data:
+  eva-caddy-config:
+  eva-db-data:
+  eva-workspace:
+  eva-self:

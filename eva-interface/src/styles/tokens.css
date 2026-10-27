@@ -1,0 +1,42 @@
+:root {
+  /* --- Surfaces --- */
+  --void: #0a0c10;         /* base background, blue-cast near-black */
+  --void-deep: #06070a;    /* darkest recess, used behind the avatar stage */
+  --panel: #12151c;        /* drawer / dock surfaces */
+  --panel-glass: rgba(18, 21, 28, 0.72);
+  --titanium: #2a2e38;     /* structural borders, brushed-metal lines */
+  --titanium-soft: #1c1f27;
+
+  /* --- EVA state glow palette --- */
+  --state-idle: #6ee7d8;       /* aurora teal — resting */
+  --state-listening: #e8a9b8;  /* rose quartz — attentive, warm */
+  --state-thinking: #a78bfa;   /* violet — reasoning */
+  --state-acting: #f0a868;     /* amber — using a tool */
+  --state-speaking: #8ff5e6;   /* brighter aurora — responding */
+  --state-error: #f0616b;      /* ember — failure */
+
+  /* --- Text --- */
+  --text-primary: #e8eaed;
+  --text-muted: #7c8290;
+  --text-faint: #4a4f5c;
+
+  /* --- Type --- */
+  --font-ui: "Manrope", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* --- Spacing scale --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* --- Radii: distinct per shape language, not one-size-fits-all --- */
+  --radius-capsule: 999px;   /* widgets, buttons */
+  --radius-sheet: 28px;      /* chat drawer top corners */
+  --radius-tight: 10px;      /* small inline chrome */
+
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+}

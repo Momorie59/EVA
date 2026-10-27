@@ -1,0 +1,30 @@
+{
+	local_certs
+	default_sni {$EVA_HOST:localhost}
+	skip_install_trust
+	auto_https disable_redirects
+	on_demand_tls {
+		ask http://eva-core:8000/api/https/ask
+	}
+}
+
+# Adresse sans nom d'hôte : EVA répond sous n'importe quel nom autorisé (IP du NAS, nom de domaine, redirection…).
+# Les certificats sont fabriqués à la demande, et seulement pour les noms acceptés par EVA (/api/https/ask).
+:{$EVA_HTTPS_PORT:8443} {
+	tls internal {
+		on_demand
+	}
+
+	handle /ws/chat* {
+		reverse_proxy eva-core:8000
+	}
+	handle /api/* {
+		reverse_proxy eva-core:8000
+	}
+	handle_path /voice/* {
+		reverse_proxy eva-voice:8100
+	}
+	handle {
+		reverse_proxy eva-interface:80
+	}
+}

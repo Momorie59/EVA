@@ -1,0 +1,36 @@
+# Whisper sur GPU : à lancer SUR LE SERVEUR IA (192.168.1.20), qui a la carte NVIDIA — le NAS n'en a pas.
+#   cd eva-voice && docker compose -f docker-compose.gpu.yml up -d --build
+# Puis sur le NAS, dans caddy/Caddyfile, remplace « reverse_proxy eva-voice:8100 » (bloc /voice/*) par
+#   reverse_proxy 192.168.1.20:8100
+# et relance : docker compose restart caddy.  Ouvre le port si ufw est actif :
+#   sudo ufw allow from 192.168.1.0/24 to any port 8100
+# Prérequis : NVIDIA Container Toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/). Vérifie : curl http://192.168.1.20:8100/api/health
+# → "whisper": {"device": "cuda", ...}. Si le GPU est inutilisable, il retombe sur le processeur et le dit dans "fallback_reason".
+services:
+  eva-voice:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: eva-voice
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    environment:
+      - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-medium}
+      - WHISPER_FAST_MODEL_SIZE=${WHISPER_FAST_MODEL_SIZE:-small}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cuda}
+      - EVA_VOICES_DIR=/voices
+      - PIPER_VOICE=${PIPER_VOICE:-fr_FR-siwis-medium}
+      - EVA_AUTH_TOKEN=${EVA_AUTH_TOKEN:-}
+    volumes:
+      - ./models:/voices
+      - eva-whisper-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+volumes:
+  eva-whisper-cache:

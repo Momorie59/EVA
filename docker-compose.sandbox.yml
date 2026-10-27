@@ -1,0 +1,11 @@
+# Isolation complète de terminal_run (facultatif) : disque en lecture seule sauf le workspace, réseau coupé.
+# Elle demande au noyau de laisser EVA créer des « espaces de noms utilisateur », ce que le profil de sécurité
+# par défaut de Docker interdit. Ce fichier assouplit CE profil pour le seul conteneur eva-core :
+#   docker compose -f docker-compose.yml -f docker-compose.sandbox.yml up -d
+# (avec ton docker-compose.override.yml, ajoute-le aussi : -f docker-compose.override.yml)
+# Sans lui, terminal_run reste utilisable avec seulement les limites mémoire/CPU, et le dit dans son résultat.
+services:
+  eva-core:
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined

@@ -1,0 +1,21 @@
+# Variante GPU NVIDIA de eva-voice (Whisper beaucoup plus rapide). À construire sur la machine qui a le GPU.
+# Les bibliothèques CUDA 12 / cuDNN 9 viennent de pip : seul le pilote NVIDIA + NVIDIA Container Toolkit sont requis sur l'hôte.
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir "nvidia-cublas-cu12" "nvidia-cudnn-cu12==9.*"
+
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib
+ENV WHISPER_DEVICE=auto
+
+COPY app ./app
+
+EXPOSE 8100
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8100"]

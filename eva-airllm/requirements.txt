@@ -1,0 +1,13 @@
+# Versions figées : AirLLM 2.11 et transformers 4.44 fonctionnent avec le torch 2.4 de l'image de base.
+# (Sans ça, pip prend transformers 5.x, qui exige torch 2.6 et désactive torch : « cannot import name GenerationMixin ».)
+airllm==2.11.0
+transformers==4.44.2
+optimum==1.23.3
+accelerate==0.34.2
+huggingface_hub>=0.24,<1.0
+safetensors>=0.4,<1.0
+scipy
+numpy<2.1
+sentencepiece
+fastapi==0.115.0
+uvicorn[standard]==0.30.6

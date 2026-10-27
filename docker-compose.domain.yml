@@ -1,0 +1,8 @@
+# Ajouté automatiquement par ./eva-https.sh domain … (via COMPOSE_FILE dans .env) : Caddy avec le module DuckDNS.
+services:
+  caddy:
+    build: ./caddy
+    image: eva-caddy-dns:latest
+    environment:
+      - EVA_DOMAIN=${EVA_DOMAIN:-eva.invalid}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}

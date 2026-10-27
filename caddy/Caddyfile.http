@@ -1,0 +1,21 @@
+# Mode HTTP simple (HTTPS désactivé) — choisi avec ./eva-https.sh off
+# Attention : sans HTTPS, les navigateurs refusent le micro, la caméra et l'installation en application (PWA)
+# ailleurs que sur le NAS lui-même (localhost). Le reste (texte, maison, fichiers) fonctionne normalement.
+{
+	auto_https off
+}
+
+:{$EVA_HTTPS_PORT:8443} {
+	handle /ws/chat* {
+		reverse_proxy eva-core:8000
+	}
+	handle /api/* {
+		reverse_proxy eva-core:8000
+	}
+	handle_path /voice/* {
+		reverse_proxy eva-voice:8100
+	}
+	handle {
+		reverse_proxy eva-interface:80
+	}
+}

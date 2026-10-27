@@ -1,0 +1,57 @@
+# Chargé automatiquement par « docker compose up » (ton docker-compose.yml n'est pas modifié).
+# AirLLM (facultatif, très lent) : très gros modèles quand le serveur IA local est indisponible.
+# Il n'est construit que sur demande : docker compose --profile airllm up -d --build
+# Sur le NAS (peu de RAM, pas de GPU), choisis un petit modèle dans .env : AIRLLM_MODEL=Qwen/Qwen2.5-7B-Instruct
+services:
+  eva-airllm:
+    profiles: ["airllm"]
+    build: ./eva-airllm
+    container_name: eva-airllm
+    restart: unless-stopped
+    environment:
+      - AIRLLM_MODEL=${AIRLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      - AIRLLM_COMPRESSION=${AIRLLM_COMPRESSION:-4bit}
+      - AIRLLM_MAX_NEW_TOKENS=${AIRLLM_MAX_NEW_TOKENS:-256}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - AIRLLM_RAM_CACHE=${AIRLLM_RAM_CACHE:-1}
+      - AIRLLM_RAM_CACHE_GB=${AIRLLM_RAM_CACHE_GB:-0}
+    volumes:
+      - ./eva-airllm/models:/models
+  eva-core:
+    environment:
+      - EVA_AIRLLM_URL=${EVA_AIRLLM_URL:-http://eva-airllm:8200}
+      - EVA_AIRLLM_FALLBACK=${EVA_AIRLLM_FALLBACK:-0}
+      - EVA_SCANNER_URL=${EVA_SCANNER_URL:-http://host.docker.internal:8300}
+      - EVA_SCANNER_TOKEN=${EVA_SCANNER_TOKEN:-}
+      - EVA_IMAGEGEN_URL=${EVA_IMAGEGEN_URL:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Code du serveur d'images (lecture seule) : EVA peut ainsi mettre à jour le serveur d'images toute seule (Paramètres › Génération d'images)
+      - ./eva-imagegen/app:/imagegen-src:ro
+  # Détection des appareils de la maison (réseau hôte : MAC, UDP, mDNS, SSDP)
+  eva-scanner:
+    build: ./eva-scanner
+    container_name: eva-scanner
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - EVA_SCANNER_TOKEN=${EVA_SCANNER_TOKEN:-}
+      - EVA_AUTH_TOKEN=${EVA_AUTH_TOKEN:-}
+  # HTTPS désactivable : EVA_CADDYFILE=./caddy/Caddyfile.http dans .env (ou ./eva-https.sh off)
+  caddy:
+    volumes:
+      - ${EVA_CADDYFILE:-./caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+  # Génération d'images sur le NAS (processeur, lent) — facultatif : docker compose --profile imagegen up -d --build
+  eva-imagegen:
+    profiles: ["imagegen"]
+    build: ./eva-imagegen
+    container_name: eva-imagegen
+    restart: unless-stopped
+    environment:
+      - IMAGEGEN_MODEL=${IMAGEGEN_MODEL:-stabilityai/sd-turbo}
+      - IMAGEGEN_IDLE_UNLOAD=${IMAGEGEN_IDLE_UNLOAD:-120}
+      - IMAGEGEN_TOKEN=${IMAGEGEN_TOKEN:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./eva-imagegen/models:/models

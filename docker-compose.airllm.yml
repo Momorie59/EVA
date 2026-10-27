@@ -1,0 +1,28 @@
+# GPU NVIDIA pour AirLLM (facultatif). Le service eva-airllm est maintenant déjà dans docker-compose.yml (repli automatique
+# quand le serveur IA local est indisponible) ; ce fichier ne sert qu'à lui réserver un GPU NVIDIA :
+#   docker compose -f docker-compose.yml -f docker-compose.airllm.yml up -d --build
+# Prérequis : NVIDIA Container Toolkit sur la machine, et beaucoup de disque (Qwen2.5-72B en 4 bits : ~40 à 80 Go).
+services:
+  eva-airllm:
+    build: ./eva-airllm
+    container_name: eva-airllm
+    restart: unless-stopped
+    environment:
+      - AIRLLM_MODEL=${AIRLLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      - AIRLLM_COMPRESSION=${AIRLLM_COMPRESSION:-4bit}
+      - AIRLLM_MAX_NEW_TOKENS=${AIRLLM_MAX_NEW_TOKENS:-256}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - AIRLLM_RAM_CACHE=${AIRLLM_RAM_CACHE:-1}
+      - AIRLLM_RAM_CACHE_GB=${AIRLLM_RAM_CACHE_GB:-0}
+    volumes:
+      - ./eva-airllm/models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  eva-core:
+    environment:
+      - EVA_AIRLLM_URL=${EVA_AIRLLM_URL:-http://eva-airllm:8200}
