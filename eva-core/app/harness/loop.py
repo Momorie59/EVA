@@ -281,6 +281,21 @@ async def _run_harness_inner(
     # Ce texte-ci vient d'EVA CORE, pas du modèle : jamais streamé, on l'envoie
     # d'un bloc pour rester cohérent avec le protocole (état "speaking" + token).
     fallback = "Je n'arrive pas à conclure cette tâche avec les outils disponibles."
+    erreurs = []                                  # dire POURQUOI : les dernières erreurs réelles des outils
+    for m in reversed(history):
+        if m.get("role") == "tool" and '"error"' in (m.get("content") or ""):
+            try:
+                e = json.loads(m["content"]).get("error")
+            except (ValueError, AttributeError):
+                e = None
+            if e and f"{m.get('name')} : {e}" not in erreurs:
+                erreurs.append(f"{m.get('name')} : {str(e)[:160]}")
+        if len(erreurs) >= 2:
+            break
+    if erreurs:
+        fallback += " Ce qui a bloqué : " + " ; ".join(erreurs) + "."
+    if trace:
+        trace.erreur = ("Trop d'étapes sans conclusion. " + " ; ".join(erreurs))[:500]
     await send_event({"type": "state", "state": "speaking"})
     await send_event({"type": "token", "text": fallback})
     return fallback

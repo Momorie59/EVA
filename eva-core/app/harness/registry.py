@@ -197,12 +197,16 @@ class ToolRegistry:
         tools += papiers_tools.all_tools(workspace_root)   # papiers : répondent « pas configurés » tant que Paperless n'est pas réglé
         self._by_name = {t.name: t for t in tools}
         self._dynamic: dict[str, Tool] = {}  # outils MCP, remplacés à chaque rafraîchissement
+        self._plugins: dict[str, Tool] = {}  # outils des plugins activés (app/plugins.py)
 
     def set_dynamic(self, tools: list[Tool]) -> None:
         self._dynamic = {t.name: t for t in tools if t.name not in self._by_name}
 
+    def set_plugins(self, tools: list[Tool]) -> None:
+        self._plugins = {t.name: t for t in tools if t.name not in self._by_name}
+
     def _all(self) -> dict[str, Tool]:
-        return {**self._by_name, **self._dynamic}
+        return {**self._by_name, **self._dynamic, **self._plugins}
 
     def get(self, name: str) -> Tool | None:
         t = self._all().get(name)

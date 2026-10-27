@@ -188,8 +188,8 @@ async def _turn(token: str, chat_id: int, text: str) -> None:
             async def confirm(tool: str, args: dict) -> bool:
                 fut = asyncio.get_running_loop().create_future()
                 _pending[chat_id] = fut
-                shown = json.dumps(args, ensure_ascii=False)[:700]
-                await _send(token, chat_id, f"⚠️ EVA veut utiliser « {tool} » avec : {shown}\nRéponds « oui » ou « non » (2 min).")
+                from . import autorisations
+                await _send(token, chat_id, f"⚠️ {autorisations.phrase_accord(tool, args)}\nRéponds « oui » ou « non » (2 min).")
                 try:
                     return await asyncio.wait_for(fut, CONFIRM_TIMEOUT)
                 except asyncio.TimeoutError:

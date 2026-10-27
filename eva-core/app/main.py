@@ -151,7 +151,7 @@ async def require_auth(authorization: str | None = Header(default=None)) -> None
 
 # Actions réservées aux administrateurs (méthodes qui modifient) : un utilisateur « user » peut discuter, utiliser ses projets
 # et le bac à sable, mais pas toucher à l'auto-évolution, aux sauvegardes, aux connecteurs ni aux modèles.
-_ADMIN_ONLY_PREFIXES = ("/api/self", "/api/backup", "/api/mcp", "/api/models", "/api/google", "/api/github", "/api/ha", "/api/telegram", "/api/projects/share", "/api/home/admin", "/api/home/discovery", "/api/print/admin", "/api/apis", "/api/cloud", "/api/airllm", "/api/images/config", "/api/images/detect", "/api/images/gallery-config", "/api/images/models", "/api/images/server", "/api/images/purge", "/api/aiserver/config", "/api/nis2", "/api/cities", "/api/access", "/api/https", "/api/room", "/api/papiers/reglages", "/api/papiers/dossiers", "/api/papiers/reanalyser", "/api/code-agent", "/api/compilation", "/api/modules", "/api/connecteurs", "/api/journal")
+_ADMIN_ONLY_PREFIXES = ("/api/self", "/api/backup", "/api/mcp", "/api/models", "/api/google", "/api/github", "/api/ha", "/api/telegram", "/api/projects/share", "/api/home/admin", "/api/home/discovery", "/api/print/admin", "/api/apis", "/api/cloud", "/api/airllm", "/api/images/config", "/api/images/detect", "/api/images/gallery-config", "/api/images/models", "/api/images/server", "/api/images/purge", "/api/aiserver/config", "/api/nis2", "/api/cities", "/api/access", "/api/https", "/api/room", "/api/papiers/reglages", "/api/papiers/dossiers", "/api/papiers/reanalyser", "/api/code-agent", "/api/compilation", "/api/modules", "/api/connecteurs", "/api/journal", "/api/plugins")
 _MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 # préfixe d'API → fonctionnalité(s) dont l'une suffit
 _FEATURE_PREFIXES = (("/api/images", ("images",)), ("/api/projects", ("files",)), ("/api/print", ("files",)), ("/api/home", ("home",)),
@@ -298,6 +298,12 @@ async def lifespan(_: FastAPI):
     from . import raccourcis as raccourcis_mod
     raccourcis_mod.lier(registry, workspace_root)
     mcp_mod.bind(registry)
+    from . import plugins as plugins_mod
+    plugins_mod.lier(registry, workspace_root)
+    try:
+        await plugins_mod.charger()
+    except Exception:  # noqa: BLE001 — jamais bloquant
+        logger.warning("Plugins non chargés", exc_info=True)
     _monitor_tasks.append(asyncio.create_task(mcp_mod.refresh()))
     if telegram_mod.push_proactive not in connection_manager.proactive_hooks:
         connection_manager.proactive_hooks.append(telegram_mod.push_proactive)
@@ -345,6 +351,24 @@ app.include_router(make_agents_router(), dependencies=[Depends(require_auth)])
 app.include_router(make_skills_router(workspace_root), dependencies=[Depends(require_auth)])
 app.include_router(make_docs_router(), dependencies=[Depends(require_auth)])
 app.include_router(make_traces_router(), dependencies=[Depends(require_auth)])
+
+
+@app.get("/api/plugins", dependencies=[Depends(require_auth)])
+async def plugins_liste(request: Request):
+    """Plugins trouvés dans le dossier plugins/ (lecture seule) et leur état. Administrateur seulement."""
+    from . import plugins as plugins_mod
+    if auth_mod.protected():
+        me = await auth_mod.identify(auth_mod.bearer(request.headers.get("authorization")))
+        if not me or me["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Réservé à l'administrateur.")
+    return {"plugins": await plugins_mod.charger(), "dossier": str(plugins_mod.dossier())}
+
+
+@app.put("/api/plugins", dependencies=[Depends(require_auth)])
+async def plugins_regler(body: dict):
+    """Active / désactive des plugins : {"nom": true|false}. Les outils sont branchés ou retirés tout de suite."""
+    from . import plugins as plugins_mod
+    return {"plugins": await plugins_mod.regler(body or {}), "dossier": str(plugins_mod.dossier())}
 
 
 @app.get("/api/journal", dependencies=[Depends(require_auth)])
@@ -542,6 +566,7 @@ async def chat_ws(websocket: WebSocket):
         if await autorisations_mod.allowed(qui, tool_name):
             return True
         await websocket.send_json({"type": "confirm_request", "tool": tool_name, "args": args,
+                                   "texte": autorisations_mod.phrase_accord(tool_name, args),
                                    "critique": autorisations_mod.critique(tool_name)})     # critique : pas de « toujours »
         deferred: list[dict] = []
         try:

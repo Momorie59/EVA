@@ -65,7 +65,8 @@ def make_router(workspace: Path) -> APIRouter:
         if workspace.resolve() not in p.parents or not p.is_file():
             raise HTTPException(status_code=404, detail="Fichier introuvable.")
         me = await _moi(request)
-        if not await acces.autorise(workspace, path, me["user"], me["role"]):
+        reel = p.relative_to(workspace.resolve()).as_posix()        # le vrai fichier, liens symboliques suivis
+        if not await acces.autorise(workspace, path, me["user"], me["role"]) or not await acces.autorise(workspace, reel, me["user"], me["role"]):
             await auth_mod.audit("denied", me["user"], "", f"GET /api/files/download {path}", "fichier d'une autre personne", 403)
             raise HTTPException(status_code=403, detail="Ce fichier ne t'appartient pas.")
         return FileResponse(p, filename=p.name)

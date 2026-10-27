@@ -66,12 +66,15 @@ EVA n'utilise que le port **8443** (les ports 80 et 443 restent libres pour l'in
 | `eva-imagegen/` | serveur d'images, à installer sur la machine IA |
 | `eva-airllm/` | facultatif : très gros modèles sur petite carte graphique (très lent) |
 | `caddy/` | la porte d'entrée HTTPS |
+| `plugins/` | tes plugins (outils ajoutés sans toucher au code), avec un exemple |
 
 Autres guides : [`MAISON.md`](MAISON.md), [`PAPIERS.md`](PAPIERS.md), [`IMAGES.md`](IMAGES.md),
 [`ACCES-A-DISTANCE.md`](ACCES-A-DISTANCE.md), [`HTTPS-SANS-AVERTISSEMENT.md`](HTTPS-SANS-AVERTISSEMENT.md),
-[`NIS2.md`](NIS2.md), [`CHARTE.md`](CHARTE.md) (règles de conduite d'EVA), [`CHANGELOG.md`](CHANGELOG.md).
+[`NIS2.md`](NIS2.md), [`PLUGINS.md`](PLUGINS.md) (ajouter des outils sans toucher au code), [`CHARTE.md`](CHARTE.md) (règles de conduite d'EVA), [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Développer
+
+L'architecture (schéma) est décrite dans [`eva-core/README.md`](eva-core/README.md). Les tests tournent à chaque envoi sur GitHub (Actions › Tests).
 
 ```bash
 # Cœur

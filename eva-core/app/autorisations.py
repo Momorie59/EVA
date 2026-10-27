@@ -65,3 +65,46 @@ async def revoke(personne: str, outil: str | None = None) -> None:
 
 async def lister(personne: str) -> list[str]:
     return [t for t in (await _load()).get(_qui(personne), []) if not critique(t)]
+
+
+# ---------------------------------------------------------------- phrase de demande d'accord (unique)
+# Une seule façon de dire ce qu'EVA s'apprête à faire : interface web, Telegram, satellites et téléphone l'utilisent.
+_VERBES = {
+    "fs_write": "écrire le fichier", "fs_append": "ajouter au fichier", "fs_delete": "supprimer", "terminal_run": "lancer la commande",
+    "docker_restart": "redémarrer le conteneur", "docker_stop": "arrêter le conteneur", "docker_start": "démarrer le conteneur",
+    "git_commit": "enregistrer dans git", "gmail_send": "envoyer un e-mail à", "calendar_create": "ajouter à l'agenda",
+    "calendar_modifier": "modifier dans l'agenda", "calendar_supprimer": "supprimer de l'agenda", "appel_telephone": "appeler",
+    "discord_envoyer": "envoyer sur Discord", "navigateur_cliquer": "cliquer sur", "navigateur_remplir": "remplir",
+    "pc_ecran_cliquer": "cliquer sur ton écran :", "pc_operateur": "prendre la main sur l'ordinateur pour",
+    "print_text": "imprimer", "print_file": "imprimer", "print_list": "imprimer la liste", "papiers_marquer": "marquer le papier",
+    "papiers_corriger": "corriger le papier", "carnet_ecrire": "écrire dans le carnet", "wiki_ecrire": "écrire la page wiki",
+    "recette_creer": "ajouter la recette", "recette_partager": "partager la recette", "routine_gerer": "modifier la routine",
+    "agent_planifier": "planifier l'agent", "agent_gerer": "modifier l'agent", "code_agent": "modifier le code du projet",
+    "obs_action": "piloter OBS :", "ha_call": "piloter Home Assistant :", "finances_noter": "noter la dépense",
+    "finances_budget": "régler le budget", "net_scan": "analyser le réseau", "net_ssh": "se connecter en SSH à",
+    "net_http": "interroger", "net_inspect": "inspecter", "net_discover": "chercher les appareils du réseau",
+    "sandbox_install": "installer dans le bac à sable :", "skill_install": "installer la compétence", "video_generate": "créer une vidéo :",
+    "home_control": "piloter", "scene_run": "lancer la scène", "device_control": "piloter", "device_hue_scene": "lancer la scène Hue",
+    "telegram_notify": "envoyer un message Telegram :", "pc_commande": "piloter l'ordinateur :", "chrome_pc": "agir dans ton Chrome :",
+}
+_CLES = ("path", "command", "to", "titre", "title", "nom", "name", "device", "appareil", "scene", "numero", "texte", "text", "url", "q", "tache")
+
+
+def phrase_accord(outil: str, args: dict | None, oral: bool = False) -> str:
+    """« EVA veut supprimer « notes.txt ». » — courte, lisible, sans JSON ; la même partout.
+    oral=True (satellites, téléphone) : « Je voudrais supprimer « notes.txt ». Tu confirmes ? »"""
+    args = args if isinstance(args, dict) else {}
+    verbe = _VERBES.get(outil, f"utiliser « {outil} »")
+    details = []
+    for k in _CLES:
+        v = args.get(k)
+        if isinstance(v, (str, int, float)) and str(v).strip():
+            t = " ".join(str(v).split())
+            details.append(f"« {t[:80]}{'…' if len(t) > 80 else ''} »")
+        if len(details) >= 2:
+            break
+    if not details:
+        autres = [f"{k} = {str(v)[:40]}" for k, v in args.items() if isinstance(v, (str, int, float, bool)) and str(v).strip()][:2]
+        details = [f"({', '.join(autres)})"] if autres else []
+    fin = (f" {' '.join(details)}" if details else "")
+    return f"Je voudrais {verbe}{fin}. Tu confirmes ?" if oral else f"EVA veut {verbe}{fin}."

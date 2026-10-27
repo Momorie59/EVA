@@ -3,6 +3,14 @@
 Format libre, pensé pour se relire vite en reprenant le sujet. Le plus
 récent en haut.
 
+## 2026-10-28 — Revue : plugins, sécurité des fichiers, accords, erreurs, tests automatiques
+- **Plugins** (`PLUGINS.md`) : des outils ajoutés sans toucher au code, dans `plugins/` (monté en lecture seule : EVA ne peut pas les modifier), activés un par un dans Paramètres › Modules › Plugins. API stable `app/plugin_api.py` (version 1). Plugin d'exemple : tirage au sort.
+- **Liens symboliques** : la recherche, l'arborescence et les ZIP ne suivent plus jamais un lien symbolique ; le téléchargement vérifie aussi le droit sur le vrai fichier visé.
+- **Demande d'accord** : une seule phrase, écrite par EVA CORE (« EVA veut supprimer « notes.txt ». »), utilisée par l'interface, Telegram et les satellites (avant : du JSON brut dans l'interface et Telegram).
+- **« Je n'arrive pas à conclure »** dit maintenant ce qui a bloqué (dernières erreurs des outils), et le tour est marqué en erreur dans Traces et Journal.
+- **Tests automatiques** sur GitHub à chaque envoi (eva-core avec une vraie base PostgreSQL, eva-voice, construction de l'interface).
+- **Schéma d'architecture** dans `eva-core/README.md`.
+
 ## 2026-10-28 — EVA évolue toute seule, journal d'activité, préparation du dépôt public
 - **Évoluer toute seule** (Apprentissage › Corrections de son code) : la nuit, EVA applique au plus une de ses propositions de code qui a passé les contrôles, passe le banc d'essai avant et après, et revient en arrière toute seule si elle ne démarre plus ou répond moins bien. Fichiers de sécurité toujours intouchables.
 - **Ses modifications survivent aux mises à jour** : au redémarrage sur une nouvelle version, elles sont rejouées sur le nouveau code (celles qui ne s'appliquent plus sont laissées de côté et notées).

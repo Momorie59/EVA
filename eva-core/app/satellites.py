@@ -265,17 +265,9 @@ class Tour:
                 return m
 
 
-_NOMS = {"device_control": "piloter un appareil", "scene_run": "lancer une scène", "device_hue_scene": "lancer une scène Hue",
-         "obs_action": "piloter OBS", "discord_envoyer": "publier sur Discord", "appel_telephone": "appeler",
-         "telegram_notify": "envoyer un message Telegram", "gmail_send": "envoyer un e-mail", "calendar_create": "ajouter à l'agenda",
-         "navigateur_cliquer": "cliquer sur la page", "navigateur_remplir": "remplir un champ", "pc_ecran_cliquer": "cliquer sur ton écran", "pc_operateur": "prendre la main sur ton ordinateur",
-         "pc_commande": "piloter l'ordinateur", "chrome_pc": "agir dans ton Chrome"}
-
-
 def _phrase_accord(outil: str, args: dict) -> str:
-    valeurs = ", ".join(str(v) for v in (args or {}).values() if isinstance(v, (str, int, float)) and str(v).strip())[:160]
-    quoi = _NOMS.get(outil, outil.replace("_", " "))
-    return confidentialite.caviarder(f"J'ai besoin de ton accord pour {quoi}{f' : {valeurs}' if valeurs else ''}. Tu confirmes ?")
+    from . import autorisations
+    return confidentialite.caviarder(autorisations.phrase_accord(outil, args, oral=True))
 
 
 def consigne_piece(piece: str) -> str:

@@ -1,8 +1,45 @@
 # EVA CORE
 
-Backend FastAPI d'EVA : connexion à Ollama, Agent Harness (boucle d'outils
-avec permissions), mémoire persistante, et un premier comportement
-proactif (monitors en tâche de fond).
+Backend FastAPI d'EVA : connexion à Ollama (ou à une IA en ligne), Agent Harness (boucle d'outils
+avec permissions), mémoire persistante, maison, satellites, comportement proactif (tâches planifiées).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    W[Interface web / appli<br/>eva-interface]
+    S[Satellites<br/>PC, Raspberry Pi, Android]
+    T[Telegram, raccourcis<br/>téléphone, MCP]
+  end
+  C[Caddy :8443<br/>HTTPS]
+  W -- WebSocket /ws/chat --> C
+  S -- HTTPS + flux NDJSON --> C
+  T --> CORE
+  C --> CORE
+  C --> V[eva-voice<br/>Whisper / Piper]
+  subgraph CORE[eva-core]
+    direction TB
+    M[main.py<br/>connexion, sessions,<br/>accords] --> SEL[harness/selection.py<br/>outils proposés pour ce tour]
+    SEL --> LOOP[harness/loop.py<br/>penser → outil → observer → répondre]
+    LOOP --> R[harness/registry.py<br/>outils intégrés + MCP + plugins]
+    LOOP --> P[harness/permissions.py<br/>AUTO / CONFIRM / FORBIDDEN]
+    R --> OUT[outils : fichiers, web, maison,<br/>listes, agenda, satellites…]
+    LOOP --> TR[traces + journal]
+  end
+  LOOP -- modèles --> O[(Ollama<br/>serveur IA)]
+  CORE --> DB[(PostgreSQL<br/>conversations, mémoire, réglages)]
+  CORE --> WS[(workspace<br/>fichiers, projets, images)]
+  SC[eva-scanner<br/>réseau hôte] --> CORE
+```
+
+Un tour de conversation : `main.py` reçoit le message (WebSocket), charge l'historique (`memory.py`, `fil.py`),
+`selection.py` choisit les outils utiles, puis `loop.py` alterne appels au modèle et outils. Un outil `CONFIRM`
+déclenche une demande d'accord (`autorisations.phrase_accord`, la même phrase partout) ; un refus n'exécute rien.
+Chaque tour est tracé (`traces.py`), visible dans les pages Traces et Journal.
+
+Ajouter un outil : dans le code (`app/harness/tools/`, enregistré dans `registry.py`) ou, sans toucher au code,
+par un **plugin** (voir `PLUGINS.md` à la racine, API stable `app/plugin_api.py`).
 
 ## Lancer en local
 
@@ -34,7 +71,7 @@ configuré (Postgres, socket Docker en lecture seule, workspace en volume).
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `OLLAMA_HOST` | URL du serveur IA où tourne Ollama | `http://192.168.1.50:11434` |
-| `OLLAMA_MODEL` | Modèle à utiliser | `llama3.1:8b` |
+| `OLLAMA_MODEL` | Modèle à utiliser | `qwen2.5:7b` |
 | `CORS_ORIGINS` | Origines autorisées (séparées par des virgules) | `*` |
 | `EVA_SYSTEM_PROMPT` | Prompt système d'EVA | voir `config.py` |
 | `EVA_WORKSPACE` | Dossier où EVA lit/écrit (outils filesystem) | `./workspace` |

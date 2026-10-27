@@ -77,6 +77,7 @@ services:
       - eva-workspace:/eva-workspace
       # Copie modifiable du code d'EVA (propositions validées par toi, page Évolution)
       - eva-self:/eva-self
+      - ./plugins:/eva-plugins:ro          # plugins (voir PLUGINS.md) : lecture seule, EVA ne peut pas les modifier
       # Donne accès en lecture à Docker pour docker_ps / docker_logs.
       # Même en lecture seule côté bind mount, le socket Docker reste un
       # accès puissant (équivalent à root sur l'hôte) — ne l'expose qu'à

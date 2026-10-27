@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+      - "eva-core/app/data/satellite/eva-satellite.apk"
+      - "eva-core/app/data/satellite/android-version.txt"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eva-core:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: eva
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U eva" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: eva-core/requirements.txt
+      - name: Dépendances
+        run: pip install -r eva-core/requirements.txt pytest
+      - name: Tests (outils lourds simulés, base PostgreSQL réelle)
+        working-directory: eva-core
+        env:
+          EVA_TEST_PG: postgresql://eva@127.0.0.1:5432/postgres
+        run: python -m pytest tests -q -p no:cacheprovider
+
+  eva-voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: eva-voice/requirements.txt
+      - run: pip install -r eva-voice/requirements.txt pytest
+      - working-directory: eva-voice
+        run: python -m pytest tests -q -p no:cacheprovider
+
+  eva-interface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: eva-interface/package-lock.json
+      - working-directory: eva-interface
+        run: npm ci && npm run build

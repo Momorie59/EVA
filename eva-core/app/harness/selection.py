@@ -173,6 +173,11 @@ def select_tool_names(texts: list[str], all_names: list[str]) -> list[str]:
             server = n.split("_")[1]
             if few or server in low or "mcp" in low:
                 chosen.add(n)
+    # Outils des plugins : proposés quand un de leurs mots (MOTS du plugin, ou son nom) est dans la demande.
+    from .. import plugins
+    for n, motif in plugins.MOTS.items():
+        if n in all_names and motif.search(haystack):
+            chosen.add(n)
     # « Liste mes recettes », « montre mes rappels »… : la demande vise un domaine d'EVA, pas les fichiers. Sans mot de fichier,
     # les outils de fichiers ne sont pas proposés (sinon un petit modèle liste le dossier de travail au lieu des recettes).
     if not _PARLE_FICHIERS.search(actuel):

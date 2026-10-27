@@ -40,6 +40,7 @@ class TraceRecorder:
         self._t0 = time.monotonic()
         self.prompt_tokens = 0
         self.completion_tokens = 0
+        self.erreur = ""                     # échec constaté pendant le tour (ex. trop d'étapes sans conclusion)
 
     def llm(self, duration_ms: int, prompt_tokens: int = 0, completion_tokens: int = 0) -> None:
         self.prompt_tokens += prompt_tokens
@@ -67,6 +68,8 @@ class TraceRecorder:
         )
 
     async def save(self, ok: bool = True, error: str = "") -> int:
+        if ok and self.erreur and not error:
+            ok, error = False, self.erreur
         duration_ms = int((time.monotonic() - self._t0) * 1000)
         async with get_pool().acquire() as conn:
             return await conn.fetchval(

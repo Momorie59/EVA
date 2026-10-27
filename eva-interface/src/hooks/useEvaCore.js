@@ -316,11 +316,11 @@ export function useEvaCore({ onReplyComplete, onToken, onAttente, onTurnComplete
             {
               id: `confirm-${Date.now()}`,
               from: "confirm",
-              text: `EVA veut : ${label} — ${JSON.stringify(data.args)}`,
+              text: data.texte || `EVA veut : ${label} — ${JSON.stringify(data.args)}`,   // phrase unique fournie par EVA CORE
               tool: data.tool,
               args: data.args,
               critique: !!data.critique,
-              spoken: `${label.toLowerCase()}${(() => { const v = Object.values(data.args || {}).find((x) => typeof x === "string" && x.length < 60); return v ? ` : ${v}` : ""; })()}`,
+              spoken: data.texte ? data.texte.replace(/^EVA veut /, "").replace(/\.$/, "") : `${label.toLowerCase()}${(() => { const v = Object.values(data.args || {}).find((x) => typeof x === "string" && x.length < 60); return v ? ` : ${v}` : ""; })()}`,
               resolved: false,
             },
           ]);

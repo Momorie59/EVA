@@ -19,7 +19,13 @@ MAX_GREP_FILE = 1_000_000
 
 
 def _walk(root: Path):
+    """Parcourt un dossier du workspace sans jamais suivre un lien symbolique (un lien vers /etc ou vers les fichiers
+    d'une autre personne ne doit être ni lu, ni cherché, ni archivé)."""
+    base = root.resolve()
     for p in sorted(root.rglob("*")):
+        if p.is_symlink() or any((root / q).is_symlink() for q in p.relative_to(root).parents if str(q) != ".") \
+                or (base not in p.resolve().parents and p.resolve() != base):
+            continue
         if any(part in SKIP_DIRS for part in p.relative_to(root).parts[:-1]) or (p.is_dir() and p.name in SKIP_DIRS):
             continue
         yield p
