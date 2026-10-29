@@ -179,7 +179,7 @@ def test_reprise_des_anciennes_conversations(eva, monkeypatch):
             break
         c.portal.call(asyncio.sleep, 0.1)
     assert r["reprise"]["etat"] == "fini"
-    assert "J'habite à Lille" in [s["texte"] for s in r["souvenirs"]]
+    assert "J'habite à Lille" in [s["texte"] for s in r["souvenirs"]], f"reprise={r['reprise']} souvenirs={[s['texte'] for s in r['souvenirs']]}"
     assert "J'habite à Lille" not in [s["texte"] for s in c.get("/api/memoire", headers=H(t["carla"])).json()["souvenirs"]]   # cloisonné
 
 
