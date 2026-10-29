@@ -34,7 +34,9 @@ jobs:
             eva-core/requirements.txt
             eva-core/requirements-extra.txt
       - name: Dépendances
-        run: pip install -r eva-core/requirements.txt -r eva-core/requirements-extra.txt pytest
+        run: |                                   # en deux temps, comme dans le Dockerfile (requirements-extra relève tzdata)
+          pip install -r eva-core/requirements.txt pytest
+          pip install -r eva-core/requirements-extra.txt
       - name: Tests (outils lourds simulés, base PostgreSQL réelle)
         working-directory: eva-core
         env:
