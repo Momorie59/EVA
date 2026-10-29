@@ -56,12 +56,17 @@ def chrome():
     port, profil = _port(), tempfile.mkdtemp()
     proc = subprocess.Popen([CHROME, "--headless", "--no-sandbox", f"--remote-debugging-port={port}", f"--user-data-dir={profil}",
                              "--disable-gpu", "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(50):
+    pret = False
+    for _ in range(150):                                   # jusqu'à 30 s : premier démarrage lent sur les machines de CI
         try:
             urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=1)
+            pret = True
             break
         except OSError:
             time.sleep(0.2)
+    if not pret:
+        proc.kill()
+        pytest.skip("Chromium ne répond pas sur son port de débogage")
     srv = ThreadingHTTPServer(("127.0.0.1", 0), Site)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}", f"http://127.0.0.1:{srv.server_address[1]}"
