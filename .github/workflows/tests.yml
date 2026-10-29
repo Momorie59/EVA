@@ -41,7 +41,12 @@ jobs:
         working-directory: eva-core
         env:
           EVA_TEST_PG: postgresql://eva@127.0.0.1:5432/postgres
-        run: python -m pytest tests -q -p no:cacheprovider
+        run: |
+          set -o pipefail
+          python -m pytest tests -q -p no:cacheprovider -rfE 2>&1 | tee resultats.txt || {
+            grep -E "^(FAILED|ERROR) " resultats.txt | head -10 | while read -r l; do echo "::error::$l"; done
+            grep -E "^E  " resultats.txt | head -10 | while read -r l; do echo "::error::$l"; done
+            exit 1; }
 
   eva-voice:
     runs-on: ubuntu-latest
