@@ -27,6 +27,7 @@ FEATURES: dict[str, dict] = {
     "wiki": {"label": "Wiki", "icon": "📚", "hint": "Lire et modifier le wiki de la famille, et avoir ses pages personnelles (si le module est activé)."},
     "finances": {"label": "Finances", "icon": "💶", "hint": "Ses propres comptes et budgets (si le module est activé). Toujours privé."},
     "contenus": {"label": "Contenus", "icon": "🎬", "hint": "Suivi de ses vidéos et publications (si le module est activé)."},
+    "inventaire": {"label": "Inventaire", "icon": "📦", "hint": "Où sont rangées les affaires de la maison et à qui on les a prêtées (si le module est activé)."},
     "recettes": {"label": "Recettes", "icon": "🍲", "hint": "Livre de recettes de la famille (si le module est activé). Un invité ne fait que les lire."},
     "code": {"label": "Code & système", "icon": "🛠️", "hint": "Terminal, code, Docker, réseau, extensions : réservé aux personnes de confiance."},
 }
@@ -36,16 +37,16 @@ PROFILE_BASE: dict[str, frozenset] = {
     # Le Salon est réservé aux adultes par défaut ; à ouvrir aux ados/enfants par personne ou par groupe.
     # Les papiers de la famille ne s'ouvrent qu'à la demande (le conjoint, par exemple), jamais d'office à un ami.
     "user": ALL - {"code", "papiers"},
-    "teen": frozenset({"voice", "web", "images", "carnets", "wiki", "recettes", "musique", "contenus"}),
+    "teen": frozenset({"voice", "web", "images", "carnets", "wiki", "recettes", "musique", "contenus", "inventaire"}),
     "child": frozenset({"voice", "images", "recettes", "musique"}),
     "guest": frozenset({"web", "recettes"}),
 }
 
 _INFO = {"weather_get", "present", "poser_question", "plan_taches", "tache_de_fond", "agenda_ics", "system_stats", "ai_server_stats", "docs_search", "api_search", "api_get", "skill_list", "skill_read"}
-_INFO_PREFIX = ("list_", "note_", "rappel_", "evolution_")
+_INFO_PREFIX = ("list_", "note_", "rappel_", "evolution_", "pratique_")
 _PREFIX = [("web", ("web_search", "web_fetch", "navigateur_", "recherche_approfondie")), ("images", ("image_",)), ("home", ("ha_", "device_", "scene_run", "routine_", "tv_")),
            ("google", ("gmail_", "calendar_")), ("notify", ("telegram_", "appel_")), ("diffusion", ("obs_", "discord_", "instagram_")), ("musique", ("spotify_",)), ("pc", ("pc_", "chrome_pc", "telephone_")), ("home", ("annonce",)),
-           ("files", ("fs_", "file_deliver", "zip_make", "project_", "print_", "document_")), ("papiers", ("papiers_",)), ("wiki", ("wiki_",)), ("recettes", ("recette_",)), ("finances", ("finances_",)), ("contenus", ("contenu_",)), ("carnets", ("carnet_",)), ("code", ("fs_delete",))]
+           ("files", ("fs_", "file_deliver", "zip_make", "project_", "print_", "document_")), ("papiers", ("papiers_",)), ("wiki", ("wiki_",)), ("recettes", ("recette_",)), ("inventaire", ("inventaire_",)), ("finances", ("finances_",)), ("contenus", ("contenu_",)), ("carnets", ("carnet_",)), ("code", ("fs_delete",))]
 
 
 def feature_of(tool: str) -> str | None:

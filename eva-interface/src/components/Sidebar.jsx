@@ -18,6 +18,7 @@ const ICONS = {
   wiki: <><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z" /><path d="M4 19V5M8 7h6M8 11h6" /></>,
   contenus: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></>,
   finances: <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18M7 15h4" /></>,
+  inventaire: <><path d="M3 8l9-5 9 5v10l-9 5-9-5z" /><path d="M3 8l9 5 9-5M12 13v10" /></>,
   recettes: <><path d="M6 13h12l-1 7H7z" /><path d="M8 13c0-3 1-5 4-5s4 2 4 5" /><path d="M12 8V4M9 5l1 2M15 5l-1 2" /></>,
   papiers: <><path d="M7 3h7l4 4v14H7z" /><path d="M14 3v4h4M10 12h5M10 16h5" /><path d="M4 6v15h11" /></>,
   logs: <path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h3" />,
@@ -43,6 +44,7 @@ export const NAV_ITEMS = [
   { id: "papiers", label: "Papiers" },
   { id: "wiki", label: "Wiki" },
   { id: "recettes", label: "Recettes" },
+  { id: "inventaire", label: "Inventaire" },
   { id: "finances", label: "Finances" },
   { id: "contenus", label: "Contenus" },
   { id: "memory", label: "Mémoire" },
@@ -60,7 +62,7 @@ import { confirmer, avertir } from "../confirmer";
 // Le menu est rangé par usage : l'essentiel en haut, le suivi technique replié.
 export const NAV_GROUPS = [
   { key: "main", ids: ["home", "chat", "overview"] },
-  { key: "daily", title: "Au quotidien", ids: ["salon", "carnets", "maison", "images", "lists", "recettes", "wiki", "finances", "contenus", "papiers", "projects", "memory"] },
+  { key: "daily", title: "Au quotidien", ids: ["salon", "carnets", "maison", "images", "lists", "recettes", "inventaire", "wiki", "finances", "contenus", "papiers", "projects", "memory"] },
   { key: "work", title: "Atelier d'EVA", collapsible: true, ids: ["agents", "skills", "sources"] },
   { key: "adv", title: "Suivi & avancé", collapsible: true, ids: ["traces", "learning", "evolution", "logs"] },
   { key: "cfg", ids: ["settings"] },
@@ -116,6 +118,7 @@ export default function Sidebar({
   view,
   onSelect,
   connected,
+  transport,
   offlineReason,
   pendingConfirms,
   badges = {},
@@ -125,7 +128,7 @@ export default function Sidebar({
   const auth = useAuth();
   const mods = useModules();
   // Module facultatif coupé, ou pas permis à cette personne : pas dans le menu.
-  const cache = (id) => ["wiki", "recettes", "finances", "contenus"].includes(id)
+  const cache = (id) => ["wiki", "recettes", "inventaire", "finances", "contenus"].includes(id)
     && (!mods[id] || (auth.required && auth.role !== "admin" && Array.isArray(auth.features) && !auth.features.includes(id)));
   const [query, setQuery] = useState("");
   const [convOpen, setConvOpen] = useState(false);
@@ -369,7 +372,7 @@ export default function Sidebar({
       </ul>
       {c && (popup && convOpen ? createPortal(convsPanel, document.body) : convsPanel)}
       {!connected && offlineReason && <p className="sidebar__foot" data-testid="offline-reason" style={{ whiteSpace: "normal" }}>⚠ {offlineReason}</p>}
-      <p className="sidebar__foot">{connected ? "En ligne" : "Hors ligne"} · local-first · <a href="https://github.com/Momorie59/EVA" target="_blank" rel="noreferrer" title="EVA est un logiciel libre (AGPL-3.0) : son code source est ici">code source</a></p>
+      <p className="sidebar__foot">{connected ? (transport === "http" ? <span title="Ce réseau bloque les WebSocket : EVA passe par du HTTP ordinaire (un peu plus lent, tout marche)">En ligne (mode compatible)</span> : "En ligne") : "Hors ligne"} · local-first · <a href="https://github.com/Momorie59/EVA" target="_blank" rel="noreferrer" title="EVA est un logiciel libre (AGPL-3.0) : son code source est ici">code source</a></p>
       {auth.required && <button className="sidebar__logout" onClick={auth.logout} data-testid="logout">Se déconnecter{auth.user ? ` (${auth.user})` : ""}</button>}
     </nav>
   );

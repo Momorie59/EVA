@@ -2173,3 +2173,32 @@ select.convs__act { background: var(--panel, rgba(0,0,0,.2)); }
 .mp__etoile { margin-left: 6px; font-size: .95rem; color: var(--text-faint, rgba(255,255,255,.3)); cursor: pointer; padding: 0 2px; }
 .mp__etoile:hover, .mp__etoile.is-on { color: #ffc45c; }
 .mp__legende { margin: 8px 4px 2px; font-size: .7rem; color: var(--text-muted); }
+
+/* ---------- Mode miroir : noir profond (seul le texte clair traverse un miroir sans tain) ---------- */
+.miroir { position: fixed; inset: 0; z-index: 9999; background: #000; color: #f4f4f4; display: grid; grid-template-rows: auto 1fr auto;
+  padding: clamp(18px, 4vw, 56px); font-family: inherit; cursor: default; transition: color .8s, opacity .8s; overflow: hidden; }
+.miroir.is-off > :not(.miroir__haut):not(video):not(canvas) { opacity: 0; transition: opacity 1.2s; }
+.miroir.is-off .miroir__heure { opacity: .18; }
+.miroir.is-off .miroir__date, .miroir.is-off .miroir__outils { opacity: 0; }
+.miroir.is-on > * { opacity: 1; transition: opacity .6s; }
+.miroir__video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.miroir__haut { display: flex; justify-content: space-between; align-items: flex-start; }
+.miroir__heure { font-size: clamp(56px, 11vw, 140px); font-weight: 200; line-height: 1; letter-spacing: -.02em; transition: opacity 1.2s; }
+.miroir__date { font-size: clamp(18px, 2.4vw, 30px); opacity: .75; text-transform: capitalize; margin-top: 6px; transition: opacity 1.2s; }
+.miroir__outils { display: flex; gap: 10px; transition: opacity 1.2s; }
+.miroir__outils button { background: transparent; border: 1px solid rgba(255,255,255,.25); color: #fff; border-radius: 99px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; opacity: .5; }
+.miroir__outils button:hover { opacity: 1; }
+.miroir__reglages { position: absolute; top: 110px; right: clamp(18px, 4vw, 56px); background: #111; border: 1px solid #333; border-radius: 14px; padding: 16px; display: grid; gap: 10px; max-width: 360px; font-size: 15px; z-index: 2; }
+.miroir__reglages small { opacity: .6; }
+.miroir__centre { display: grid; align-content: center; justify-items: center; gap: 22px; text-align: center; cursor: pointer; }
+.miroir__salut { font-size: clamp(30px, 5vw, 64px); font-weight: 300; }
+.miroir__reponse { max-width: min(900px, 90vw); font-size: clamp(18px, 2.2vw, 28px); line-height: 1.45; opacity: .92; max-height: 40vh; overflow: hidden; }
+.miroir__reponse p { margin: 0 0 .4em; }
+.miroir__statut { font-size: 16px; opacity: .45; letter-spacing: .04em; }
+.miroir__statut.is-ecoute { opacity: 1; color: #ffd27a; animation: miroir-pulse 1.4s infinite; }
+@keyframes miroir-pulse { 50% { opacity: .5; } }
+.miroir__cartes { display: flex; flex-wrap: wrap; gap: clamp(12px, 2vw, 28px); justify-content: center; }
+.miroir__carte { display: grid; gap: 4px; min-width: 200px; max-width: 340px; font-size: clamp(14px, 1.5vw, 19px); opacity: .85; }
+.miroir__carte-titre { font-size: .8em; text-transform: uppercase; letter-spacing: .12em; opacity: .55; }
+.miroir__discret { opacity: .6; align-self: center; }
+.miroir__note { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 13px; opacity: .5; text-align: center; }

@@ -30,6 +30,8 @@ import ListesPage from "./components/pages/ListesPage";
 import PapiersPage from "./components/pages/PapiersPage";
 import WikiPage from "./components/pages/WikiPage";
 import RecettesPage from "./components/pages/RecettesPage";
+import InventairePage from "./components/pages/InventairePage";
+import Miroir from "./components/Miroir";
 import FinancesPage from "./components/pages/FinancesPage";
 import ContenusPage from "./components/pages/ContenusPage";
 import ImagesPage from "./components/pages/ImagesPage";
@@ -81,6 +83,13 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const activeView = view;
   const goto = (v) => { setView(v); setMenuOpen(false); };
+  // Mode miroir (écran derrière un miroir sans tain) : adresse « ?miroir » (kiosque) ou bouton dans Maison › Miroir.
+  const [miroir, setMiroir] = useState(() => { try { return new URLSearchParams(window.location.search).has("miroir"); } catch { return false; } });
+  useEffect(() => { const ouvrir = () => setMiroir(true); window.addEventListener("eva:miroir", ouvrir); return () => window.removeEventListener("eva:miroir", ouvrir); }, []);
+  const quitterMiroir = () => {
+    setMiroir(false);
+    try { const u = new URL(window.location.href); if (u.searchParams.has("miroir")) { u.searchParams.delete("miroir"); window.history.replaceState(null, "", u); } } catch { /* ignoré */ }
+  };
   // Ne parle à voix haute que si la dernière question venait du micro —
   // pas si on lui a écrit, pour ne pas surprendre en silence.
   const lastInputWasVoiceRef = useRef(false);
@@ -128,7 +137,7 @@ export default function App() {
   const [voicePrefs, setVoicePrefs] = useVoicePrefs();
   const [liveOpen, setLiveOpen] = useState(false);
   const hintRef = useRef(null);
-  const { activity, evaState, setEvaState, scene, setScene, messages, sendMessage, stop, respondConfirm, respondQuestion, connected, offlineReason, lastModel, rateMessage } = useEvaCore({
+  const { activity, evaState, setEvaState, scene, setScene, messages, sendMessage, stop, respondConfirm, respondQuestion, connected, offlineReason, transport, lastModel, rateMessage } = useEvaCore({
     sessionId,
     onTurnComplete: conversations.refresh,
     onSpeaker: (name, source) => hintRef.current?.(name, source),
@@ -329,6 +338,7 @@ export default function App() {
     papiers: <PapiersPage />,
     wiki: <WikiPage />,
     recettes: <RecettesPage />,
+    inventaire: <InventairePage />,
     finances: <FinancesPage />,
     contenus: <ContenusPage />,
     memory: <MemoryPage />,
@@ -353,9 +363,17 @@ export default function App() {
   const lastReplyMsg = [...messages].reverse().find((m) => m.from === "eva" && m.text);
   const lastReply = lastReplyMsg ? { id: lastReplyMsg.id, text: lastReplyMsg.text.slice(0, 320) } : null;
 
+  if (miroir) {
+    return (
+      <Miroir onQuitter={quitterMiroir} onMicro={handleToggleMic} onDire={(t) => voice.speak(t)}
+        ecoute={voice.isRecording || wakeWord.phase === "awake"} parle={voice.isSpeaking} etat={evaState}
+        derniereReponse={lastReply} connecte={connected} />
+    );
+  }
+
   if (!admin) {
     return (
-      <SimpleShell pages={{ chat: pages.chat, images: pages.images, lists: pages.lists, papiers: pages.papiers, wiki: pages.wiki, recettes: pages.recettes, salon: pages.salon, carnets: pages.carnets, maison: pages.maison, projects: pages.projects }} onMic={handleToggleMic} recording={voice.isRecording} speaking={voice.isSpeaking} sessions={conversations.sessions} activeId={sessionId}
+      <SimpleShell pages={{ chat: pages.chat, images: pages.images, lists: pages.lists, papiers: pages.papiers, wiki: pages.wiki, recettes: pages.recettes, inventaire: pages.inventaire, salon: pages.salon, carnets: pages.carnets, maison: pages.maison, projects: pages.projects }} onMic={handleToggleMic} recording={voice.isRecording} speaking={voice.isSpeaking} sessions={conversations.sessions} activeId={sessionId}
         onOpen={openSession} onNew={async () => openSession(await conversations.create())} connected={connected} salon={salon} />
     );
   }
@@ -373,6 +391,7 @@ export default function App() {
         onSelect={goto}
         mobileOpen={menuOpen}
         connected={connected}
+        transport={transport}
         offlineReason={offlineReason}
         pendingConfirms={pendingConfirms}
         badges={{ salon: salon.unread + salon.dmTotal }}

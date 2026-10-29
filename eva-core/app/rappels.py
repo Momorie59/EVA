@@ -218,8 +218,15 @@ async def sonner(r) -> None:
     cibles = []
     if r["session"].startswith("satellite-"):
         cibles.append(r["session"][len("satellite-"):])
-    if r["piece"]:
-        cibles += [sid for sid, _s in await satellites.trouver(r["piece"])]
+    piece = r["piece"]
+    if not piece and not cibles:                           # la pièce où se trouve la personne (ESP32), s'il y a un satellite
+        try:
+            from . import espresense
+            piece = await espresense.piece_de(r["qui"]) or ""
+        except Exception:  # noqa: BLE001
+            piece = ""
+    if piece:
+        cibles += [sid for sid, _s in await satellites.trouver(piece)]
     for sid in dict.fromkeys(cibles):
         try:
             await satellites.ordonner(sid, {"type": "dire", "texte": f"Rappel : {r['texte']}"}, delai=10)

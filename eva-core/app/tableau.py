@@ -89,6 +89,17 @@ async def _postits() -> dict | None:
     return {"titre": "Post-it", "icone": "📝", "lignes": [x["text"][:60] for x in n]}
 
 
+async def _poubelles() -> dict | None:
+    from . import pratique
+    r = await pratique.poubelles()
+    if r.get("error") or not r.get("prochains"):
+        return None
+    p = r["prochains"][0]
+    if not (r.get("ce_soir") or p["quand"] in ("aujourd'hui", "demain")):
+        return None
+    return {"titre": "Poubelles", "icone": "🗑", "lignes": [r["phrase"][:80]]}
+
+
 async def composer(cle: str, role: str, user: str) -> dict:
     hit = _cache.get(cle)
     if hit and time.monotonic() - hit[0] < CACHE_S:
@@ -100,6 +111,7 @@ async def composer(cle: str, role: str, user: str) -> dict:
     if "musique" in feats:
         sources.append(_musique())
     sources.append(_postits())
+    sources.append(_poubelles())
 
     async def sur(c):
         try:

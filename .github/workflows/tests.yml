@@ -25,14 +25,16 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U eva" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: eva-core/requirements.txt
+          cache-dependency-path: |
+            eva-core/requirements.txt
+            eva-core/requirements-extra.txt
       - name: Dépendances
-        run: pip install -r eva-core/requirements.txt pytest
+        run: pip install -r eva-core/requirements.txt -r eva-core/requirements-extra.txt pytest
       - name: Tests (outils lourds simulés, base PostgreSQL réelle)
         working-directory: eva-core
         env:
@@ -42,8 +44,8 @@ jobs:
   eva-voice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -55,8 +57,8 @@ jobs:
   eva-interface:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: npm

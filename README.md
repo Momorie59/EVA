@@ -18,9 +18,9 @@ dans une pièce, ton PC, un téléphone Android).
 - **Satellites** : installés depuis l'interface pour Windows, Mac, Linux / Raspberry Pi et Android ; pause,
   diagnostic, mise à jour et désinstallation à distance. Sur un PC, EVA peut lire l'écran et cliquer, avec ton accord.
 - **Maison** : appareils (Tuya, Shelly, Hue, WiZ, Yeelight, Tasmota, WLED, MQTT, Home Assistant…), scènes, routines,
-  présence, imprimantes, Chromecast.
+  présence, imprimantes, Chromecast, **mode miroir** (écran qui reconnaît la famille et s'allume quand on se présente).
 - **Famille** : comptes adulte / adolescent / enfant / invité, données séparées par personne, salon (messages,
-  appels), carnets partagés, listes de courses, livre de recettes, wiki, papiers et échéances (Paperless).
+  appels), carnets partagés, listes de courses, livre de recettes, inventaire et prêts, poubelles, vacances scolaires, prix des carburants, wiki, papiers et échéances (Paperless).
 - **Images** : création et retouche (serveur Stable Diffusion sur la machine IA).
 - **Mémoire et apprentissage** : « retiens que… », résumé des conversations la nuit, leçons tirées de ses erreurs,
   et, si tu le permets, **évolution de son propre code** (contrôlée, annulée toute seule si elle marche moins bien).

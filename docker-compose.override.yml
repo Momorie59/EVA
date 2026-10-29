@@ -42,6 +42,17 @@ services:
   caddy:
     volumes:
       - ${EVA_CADDYFILE:-./caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+  # Courtier MQTT (facultatif) : pour les ESP32 de présence pièce par pièce (ESPresense, voir MAISON.md) ou d'autres capteurs.
+  #   docker compose --profile mqtt up -d eva-mqtt     → les ESP32 se connectent à <IP du NAS>:1883
+  eva-mqtt:
+    profiles: ["mqtt"]
+    image: eclipse-mosquitto:2
+    container_name: eva-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
   # Génération d'images sur le NAS (processeur, lent) — facultatif : docker compose --profile imagegen up -d --build
   eva-imagegen:
     profiles: ["imagegen"]

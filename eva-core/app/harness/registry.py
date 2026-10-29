@@ -190,6 +190,9 @@ class ToolRegistry:
         tools += rappel_tools.all_tools()
         tools += routine_tools.all_tools()
         tools += tv_tools.all_tools()
+        from .tools import inventaire_tools, pratique_tools
+        tools += pratique_tools.all_tools()
+        tools += inventaire_tools.all_tools()
         tools += agent_tools.all_tools()
         tools += carnet_tools.all_tools()
         tools.append(EvolutionDemanderTool())

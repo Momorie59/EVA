@@ -161,6 +161,23 @@ def make_router() -> APIRouter:
         e = await presence.etat()
         return {"appareils": presence.appareils_vus(), "etat": e["personnes"], "erreur": e["erreur"]}
 
+    # ---------------- Présence pièce par pièce (ESP32 + ESPresense, MQTT)
+    @r.get("/home/admin/espresense")
+    async def espresense_etat():
+        from . import espresense
+        c = await espresense.reglages()
+        return {"reglages": {**c, "mot_de_passe": "•••" if c["mot_de_passe"] else ""}, "etat": espresense.etat(),
+                "appareils": espresense.appareils_vus(), "pieces": await espresense.pieces_famille()}
+
+    @r.put("/home/admin/espresense")
+    async def espresense_regler(body: dict):
+        from . import espresense
+        b = dict(body or {})
+        if b.get("mot_de_passe") == "•••":
+            b.pop("mot_de_passe")
+        await espresense.regler(b)
+        return await espresense_etat()
+
     # ---------------- Philips Hue en direct (pont local)
     @r.get("/home/admin/hue")
     async def hue_ponts():

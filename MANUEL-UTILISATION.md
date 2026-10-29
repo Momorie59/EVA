@@ -44,6 +44,7 @@ Pour les actions les plus sensibles, EVA redemande à chaque fois.
 | Rappels, minuteurs | « Rappelle-moi de sortir le gâteau dans 10 minutes », « Tous les jours à 8 h, rappelle-moi le café », « Annule le rappel du café » |
 | Tâches automatiques | « Chaque matin à 7 h 30, donne-moi la météo et mes rendez-vous », « Mets en pause la tâche du matin » |
 | Recettes | « Ajoute la recette de la paella avec une photo » (EVA la dessine), « Remplace les moules par des crevettes » (ingrédients **et** étapes), « Passe-la à 6 personnes », « Donne-moi un lien pour la partager » |
+| Infos pratiques | « Quelle poubelle je sors ce soir ? », « C'est quand les prochaines vacances ? », « Le prix du gazole à Lons ? », « Les titres du jour », « Un jour comme aujourd'hui ? » (réglages : Paramètres › Services connectés › Infos pratiques) |
 | Carnets, wiki | « Note dans le carnet Vacances, section Bretagne : crème solaire », « Crée une page wiki sur le potager, avec une illustration » |
 | Budget | « Note 12,50 € au marché », « Fixe un budget de 300 € pour l'alimentation » |
 | Agenda, mails | « Qu'est-ce que j'ai demain ? », « Déplace le dentiste à 15 h », « Supprime le rendez-vous de jeudi », « Ai-je des mails importants ? », « Où en sont mes colis ? » |
@@ -124,7 +125,8 @@ Plus tu ajoutes de services avec leur clé gratuite, moins EVA tombe à court. C
 | **Conversation** | Discuter, joindre des fichiers, choisir le modèle, suivre le plan et les tâches en fond. 🗑 dans l'historique : la **corbeille** (une conversation supprimée s'y garde 30 jours) |
 | **Tableau de bord** | État du NAS, du serveur IA, de Docker, de la météo |
 | **Projets** | Dossiers de travail : EVA y range fichiers et décisions. Partage possible avec d'autres comptes |
-| **Maison** | Appareils, scènes, **routines**, présence, imprimantes, réseau, **satellites** (installation depuis la page) |
+| **Maison** | Appareils, scènes, **routines**, présence, imprimantes, réseau, **satellites** (installation depuis la page), **miroir** (écran qui reconnaît la famille, voir MAISON.md) |
+| **Inventaire** | (module à activer) Où sont rangées les affaires (pièce › meuble › tiroir) et à qui on les a prêtées ; à la voix : « où est la perceuse ? », « j'ai prêté la tondeuse à Paul » |
 | **Listes** | Courses, tâches… remplies à la voix. Listes **🔒 privées** (toi seul les vois). Courses **rangées par rayon** du magasin ; 📱 Partager vers le téléphone, Copier, Telegram, impression recto-verso |
 | **Carnets** | Notes en sections et pages, à partager |
 | **Salon** | Qui est connecté, discussion écrite, appel voix ou vidéo entre les comptes |

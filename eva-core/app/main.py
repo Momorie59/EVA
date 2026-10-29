@@ -151,7 +151,7 @@ async def require_auth(authorization: str | None = Header(default=None)) -> None
 
 # Actions réservées aux administrateurs (méthodes qui modifient) : un utilisateur « user » peut discuter, utiliser ses projets
 # et le bac à sable, mais pas toucher à l'auto-évolution, aux sauvegardes, aux connecteurs ni aux modèles.
-_ADMIN_ONLY_PREFIXES = ("/api/self", "/api/backup", "/api/mcp", "/api/models", "/api/google", "/api/github", "/api/ha", "/api/telegram", "/api/projects/share", "/api/home/admin", "/api/home/discovery", "/api/print/admin", "/api/apis", "/api/cloud", "/api/airllm", "/api/images/config", "/api/images/detect", "/api/images/gallery-config", "/api/images/models", "/api/images/server", "/api/images/purge", "/api/aiserver/config", "/api/nis2", "/api/cities", "/api/access", "/api/https", "/api/room", "/api/papiers/reglages", "/api/papiers/dossiers", "/api/papiers/reanalyser", "/api/code-agent", "/api/compilation", "/api/modules", "/api/connecteurs", "/api/journal", "/api/plugins")
+_ADMIN_ONLY_PREFIXES = ("/api/self", "/api/backup", "/api/mcp", "/api/models", "/api/google", "/api/github", "/api/ha", "/api/telegram", "/api/projects/share", "/api/home/admin", "/api/home/discovery", "/api/print/admin", "/api/apis", "/api/cloud", "/api/airllm", "/api/images/config", "/api/images/detect", "/api/images/gallery-config", "/api/images/models", "/api/images/server", "/api/images/purge", "/api/aiserver/config", "/api/nis2", "/api/cities", "/api/access", "/api/https", "/api/room", "/api/papiers/reglages", "/api/papiers/dossiers", "/api/papiers/reanalyser", "/api/code-agent", "/api/compilation", "/api/modules", "/api/connecteurs", "/api/journal", "/api/plugins", "/api/pratique")
 _MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 # préfixe d'API → fonctionnalité(s) dont l'une suffit
 _FEATURE_PREFIXES = (("/api/images", ("images",)), ("/api/projects", ("files",)), ("/api/print", ("files",)), ("/api/home", ("home",)),
@@ -261,7 +261,11 @@ async def lifespan(_: FastAPI):
     from . import lecons as lecons_mod
     lecons_mod.lier(registry)
     await lecons_mod.charger()
-    scheduler.register_periodic("apprentissage", lecons_mod.periodique, 900)                      # leçons tirées des ratés, la nuit
+    scheduler.register_periodic("apprentissage", lecons_mod.periodique, 900)
+    from . import chat_http as chat_http_mod
+    scheduler.register_periodic("chat-http", chat_http_mod.menage, 30)
+    from . import pratique as pratique_mod
+    scheduler.register_periodic("poubelles", pratique_mod.veille_poubelles, 300)                    # rappel la veille au soir                             # conversations HTTP abandonnées                      # leçons tirées des ratés, la nuit
     from . import journal as journal_mod
     await journal_mod.noter_demarrage()
     from . import rappels as rappels_mod
@@ -298,6 +302,17 @@ async def lifespan(_: FastAPI):
     from . import raccourcis as raccourcis_mod
     raccourcis_mod.lier(registry, workspace_root)
     mcp_mod.bind(registry)
+    from . import espresense as espresense_mod
+    try:
+        await espresense_mod.demarrer()
+    except Exception:  # noqa: BLE001
+        logger.warning("ESPresense non démarré", exc_info=True)
+    from . import miroir as miroir_mod
+    miroir_mod.lier(workspace_root)
+    try:
+        await miroir_mod.recharger()
+    except Exception:  # noqa: BLE001
+        logger.warning("Visages du miroir non chargés", exc_info=True)
     from . import plugins as plugins_mod
     plugins_mod.lier(registry, workspace_root)
     try:
@@ -423,6 +438,12 @@ app.include_router(make_mcp_serveur_router())           # auth propre : jeton MC
 app.include_router(make_wiki_router(), dependencies=[Depends(require_auth)])
 _recettes_prive, _recettes_public = make_recettes_routers()
 app.include_router(_recettes_prive, dependencies=[Depends(require_auth)])
+from .routes_miroir import make_router as make_miroir_router  # noqa: E402
+app.include_router(make_miroir_router(), dependencies=[Depends(require_auth)])
+from .routes_inventaire import make_router as make_inventaire_router  # noqa: E402
+from .routes_pratique import make_router as make_pratique_router  # noqa: E402
+app.include_router(make_inventaire_router(), dependencies=[Depends(require_auth)])
+app.include_router(make_pratique_router(), dependencies=[Depends(require_auth)])
 app.include_router(_recettes_public)                   # lien de partage : page en lecture seule, sans compte
 _medias_prive, _medias_public = make_medias_routers(workspace_root)
 app.include_router(_medias_prive, dependencies=[Depends(require_auth)])
@@ -511,6 +532,45 @@ async def room_ws(websocket: WebSocket):
         pass
     finally:
         await rooms_mod.hub.leave(cid)
+
+
+# ---- Conversation sans WebSocket (proxy d'entreprise qui bloque /ws/chat) : même conversation, en HTTP (chat_http.py)
+@app.post("/api/chat-http/ouvrir")
+async def chat_http_ouvrir(request: Request, session: str = "default", token: str = ""):
+    from . import chat_http
+    jeton = token or auth_mod.bearer(request.headers.get("authorization")) or ""
+    hote = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "")
+    cid, ws = await chat_http.ouvrir(chat_ws, {"session": session, "token": jeton}, request.headers, hote)
+    if ws.ferme and ws.code in (4401, 4403):
+        chat_http.fermer(cid)
+        raise HTTPException(status_code=401 if ws.code == 4401 else 403, detail="Connexion refusée.")
+    return {"id": cid}
+
+
+@app.post("/api/chat-http/{cid}/envoyer")
+async def chat_http_envoyer(cid: str, body: dict):
+    from . import chat_http
+    ws = chat_http.trouver(cid)
+    if not ws or ws.ferme:
+        raise HTTPException(status_code=410, detail="Conversation fermée : rouvre-la.")
+    ws.envoyer(body if isinstance(body, dict) else {})
+    return {"ok": True}
+
+
+@app.get("/api/chat-http/{cid}/recevoir")
+async def chat_http_recevoir(cid: str, apres: int = 0):
+    from . import chat_http
+    ws = chat_http.trouver(cid)
+    if not ws:
+        raise HTTPException(status_code=410, detail="Conversation fermée : rouvre-la.")
+    return await ws.recevoir(apres)
+
+
+@app.post("/api/chat-http/{cid}/fermer")
+async def chat_http_fermer(cid: str):
+    from . import chat_http
+    chat_http.fermer(cid)
+    return {"ok": True}
 
 
 @app.websocket("/ws/chat")
@@ -883,8 +943,9 @@ async def chat_ws(websocket: WebSocket):
             if briefing:
                 await send_event({"type": "state", "state": "acting"})
                 bw = await registry.get("weather_get").execute(city=await cities_mod.default(), days=4) if registry.get("weather_get") else None
-                bn = []
-                if registry.get("web_search"):
+                from . import pratique as pratique_mod
+                bn = await pratique_mod.resultats_actu(6) or []      # titres du journal réglé (RSS), sinon recherche web
+                if not bn and registry.get("web_search"):
                     bres = await registry.get("web_search").execute(query="actualités du jour monde", max_results=6)
                     bres, _s = guard.annotate("web_search", bres)
                     bn = bres.get("results", []) if isinstance(bres, dict) else []
@@ -920,13 +981,21 @@ async def chat_ws(websocket: WebSocket):
                 sc = scenes.clock_scene(settings.timezone)
                 await send_event({"type": "scene", "scene": sc})
                 turn_user_content += f"\n\n[EVA affiche l'horloge. Heure réelle : {sc['time']}, {sc['date']}. Réponds en une phrase.]"
-            elif scenes.wants_news(user_text) and registry.get("web_search"):
+            elif scenes.wants_news(user_text) and (registry.get("web_search") or registry.get("pratique_actu")):
                 await send_event({"type": "state", "state": "acting"})
                 q = "actualités du jour monde"
-                await send_event({"type": "tool_call", "name": "web_search", "args": {"query": q}})
-                sres = await registry.get("web_search").execute(query=q, max_results=8)
-                sres, _susp = guard.annotate("web_search", sres)
-                await send_event({"type": "tool_result", "name": "web_search", "result": sres})
+                from . import pratique as pratique_mod
+                rss = await pratique_mod.resultats_actu(8)           # flux RSS du journal réglé : fiable et rapide
+                if rss:
+                    await send_event({"type": "tool_call", "name": "pratique_actu", "args": {}})
+                    sres = {"results": rss}
+                    sres, _susp = guard.annotate("pratique_actu", sres)
+                    await send_event({"type": "tool_result", "name": "pratique_actu", "result": sres})
+                else:
+                    await send_event({"type": "tool_call", "name": "web_search", "args": {"query": q}})
+                    sres = await registry.get("web_search").execute(query=q, max_results=8)
+                    sres, _susp = guard.annotate("web_search", sres)
+                    await send_event({"type": "tool_result", "name": "web_search", "result": sres})
                 nsc = scenes.news_scene(sres.get("results", []), q) if isinstance(sres, dict) else {}
                 if nsc:
                     await send_event({"type": "scene", "scene": nsc})

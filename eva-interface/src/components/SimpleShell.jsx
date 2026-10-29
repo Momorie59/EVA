@@ -4,7 +4,7 @@ import HelpLayer from "./HelpLayer";
 import SalonDock from "./SalonDock";
 import PageGuide from "../PageGuide";
 
-const TABS = [["chat", "Conversation", null], ["images", "Images", "images"], ["lists", "Listes", null], ["recettes", "Recettes", "recettes"], ["wiki", "Wiki", "wiki"], ["papiers", "Papiers", "papiers"], ["salon", "Salon", "salon"], ["carnets", "Carnets", "carnets"], ["maison", "Maison", "home"], ["projects", "Projets", "files"]];
+const TABS = [["chat", "Conversation", null], ["images", "Images", "images"], ["lists", "Listes", null], ["recettes", "Recettes", "recettes"], ["inventaire", "Inventaire", "inventaire"], ["wiki", "Wiki", "wiki"], ["papiers", "Papiers", "papiers"], ["salon", "Salon", "salon"], ["carnets", "Carnets", "carnets"], ["maison", "Maison", "home"], ["projects", "Projets", "files"]];
 
 // Interface « standard » des utilisateurs non administrateurs : une conversation, des images, des listes — rien d'autre.
 // (L'administrateur garde l'interface complète : réglages, agents, évolution, maison, journal…)

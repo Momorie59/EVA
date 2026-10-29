@@ -21,6 +21,7 @@ import IdentityCard from "../IdentityCard";
 import Nis2Card from "../Nis2Card";
 import AiServerCard from "../AiServerCard";
 import CitiesCard from "../CitiesCard";
+import PratiqueCard from "../PratiqueCard";
 import AccessCard from "../AccessCard";
 import QuotasCard from "../QuotasCard";
 import MesDonneesCard from "../MesDonneesCard";
@@ -95,13 +96,13 @@ export default function SettingsPage({ connected, offlineReason }) {
     { id: "voice", icon: "🎙️", label: "Voix & personnes", hint: "Voix d'EVA, micro, reconnaissance des personnes.",
       words: "voix micro whisper piper reconnaissance visage personnes identité parole", body: <><VoiceCard /><IdentityCard /></> },
     { id: "services", icon: "🔌", label: "Services connectés", hint: "Google, Home Assistant, Telegram, OBS, Discord, Instagram, appels, outils externes, API publiques.",
-      words: "raccourci raccourcis iphone siri android tasker agenda agendas ical ics webcal calendrier vacances spotify musique playlist serveur mcp jeton claude desktop cursor obs stream live discord instagram twilio appel sms téléphone diffusion github git dépôt dépôts jeton ville villes météo ville par défaut serveur ia dashboard gpu google gmail agenda home assistant telegram mcp outils externes api maison connecteur",
-      body: <><CitiesCard /><GoogleCard /><AgendasCard /><RaccourcisCard />{admin && <GitHubCard />}<HomeAssistantCard /><TelegramCard />{admin && <SpotifyCard />}{admin && <ConnecteursCard />}<McpCard />{admin && <McpServeurCard />}{admin && <AiServerCard />}{admin && <ApiCatalogCard />}</> },
+      words: "poubelles poubelle ramassage déchets vacances scolaires zone jours fériés carburant essence gazole actualités rss journal éphéméride infos pratiques raccourci raccourcis iphone siri android tasker agenda agendas ical ics webcal calendrier vacances spotify musique playlist serveur mcp jeton claude desktop cursor obs stream live discord instagram twilio appel sms téléphone diffusion github git dépôt dépôts jeton ville villes météo ville par défaut serveur ia dashboard gpu google gmail agenda home assistant telegram mcp outils externes api maison connecteur",
+      body: <><CitiesCard /><PratiqueCard /><GoogleCard /><AgendasCard /><RaccourcisCard />{admin && <GitHubCard />}<HomeAssistantCard /><TelegramCard />{admin && <SpotifyCard />}{admin && <ConnecteursCard />}<McpCard />{admin && <McpServeurCard />}{admin && <AiServerCard />}{admin && <ApiCatalogCard />}</> },
     { id: "security", icon: "🔒", label: "Sécurité & données", hint: "Connexion, utilisateurs, journal d'accès, sauvegarde.",
       words: "autorisations toujours autoriser accord confirmation mes données export exporter effacer rgpd supprimer mes données https tls certificat http fonctionnalités groupes droits voix autorisations nis2 conformité incident sécurité mot de passe connexion utilisateur utilisateurs administrateur journal audit sauvegarde backup restauration compte",
       body: <><SecurityCard /><AutorisationsCard />{admin && <HttpsCard />}{admin && <Nis2Card />}{auth.required && auth.role === "admin" && <><UsersCard /><AccessCard /><QuotasCard /><AuditCard /></>}<MesDonneesCard admin={auth.required && auth.role === "admin"} /><BackupCard /></> },
     { id: "modules", icon: "🧩", label: "Modules", hint: "Fonctions en plus à activer : wiki, livre de recettes.",
-      words: "modules module wiki recettes recette livre cuisine activer désactiver", body: admin ? <ModulesCard /> : <div className="card"><p className="card__hint">Seul l'administrateur active les modules.</p></div> },
+      words: "modules module wiki recettes recette livre cuisine inventaire prêts plugins activer désactiver", body: admin ? <ModulesCard /> : <div className="card"><p className="card__hint">Seul l'administrateur active les modules.</p></div> },
     { id: "look", icon: "✨", label: "Apparence & application", hint: "Thème, couleurs, installation sur téléphone ou ordinateur.",
       words: "apparence thème couleur application installer téléphone pwa", body: <><ThemeCard /><InstallCard /></> },
   ], [admin, auth.required, auth.role, auth.user, health, connected, offlineReason]); // eslint-disable-line react-hooks/exhaustive-deps

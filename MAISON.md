@@ -135,3 +135,60 @@ et tout le menu Réseau sont réservés aux **administrateurs**.
 ## Home Assistant
 
 Maison › Appareils › *Importer depuis Home Assistant* : saisis l'adresse (ex. `http://192.168.1.20:8123`) et un jeton d'accès longue durée (Home Assistant › ton profil › Sécurité). EVA liste les entités commandables avec leur zone (= pièce) ; tu coches, renommes, ajoutes. Les commandes passent par les services de Home Assistant (`light.turn_on`, `cover.open_cover`, `climate.set_temperature`, `scene.turn_on`…). Volets : seuls les types volet/store/rideau sont commandables ; portails, garages, portes, serrures et alarmes ne sont jamais proposés ni commandés.
+
+
+## Miroir intelligent (Maison › Miroir)
+
+Un écran qui reconnaît la famille et s'allume quand quelqu'un se présente : une tablette, un vieux PC avec webcam,
+ou un écran posé derrière un **miroir sans tain** (l'écran est noir : seul le texte clair traverse le miroir).
+
+1. **Une fois** (administrateur) : Maison › Miroir › *Télécharger la reconnaissance des visages* (39 Mo).
+2. **Chaque personne** : Maison › Miroir › *Apprendre* — seul(e) face à la caméra, 6 photos en 6 secondes.
+   L'administrateur peut le faire pour un autre compte. Chacun peut effacer son visage.
+3. **Sur l'écran du miroir** : ouvre `https://<IP-du-NAS>:8443/?miroir` (connecté avec un compte de la famille),
+   en plein écran ou en mode kiosque (Chromium : `chromium --kiosk "https://192.168.1.10:8443/?miroir"`).
+   Autorise la caméra et le micro. Échap ou ✕ pour quitter.
+
+Ce qu'il fait :
+- quelqu'un arrive → l'écran s'allume, « Bonjour Amélie », ses tuiles (météo, agenda, colis, post-it) ;
+- plusieurs personnes, ou quelqu'un d'inconnu → mode discret : heure, date et météo seulement ;
+- on parle avec le mot d'éveil (« EVA… », réglé dans Paramètres › Voix) ou en touchant l'écran ; la réponse s'affiche
+  en grand ;
+- ⚙ sur le miroir : saluer à voix haute, écouter tout de suite à l'arrivée d'une personne de la famille ;
+- personne pendant 45 secondes → écran noir.
+
+Vie privée : la reconnaissance se fait sur le NAS ; l'écran envoie une petite image toutes les 1,5 seconde, regardée
+puis oubliée. Seules les empreintes des visages appris (des nombres) sont gardées, et partent avec « Mes données ».
+
+## Présence pièce par pièce (ESP32 + ESPresense)
+
+Avec un ESP32 par pièce (un ESP32-WROOM-32 nu suffit, environ 5 €, alimenté par un chargeur USB), EVA sait **dans quelle
+pièce** est chacun : « où est Léa ? », la présence affiche « Paul (bureau) », et un rappel est dit sur le satellite de la
+pièce où tu te trouves. Les ESP32 repèrent en Bluetooth les téléphones et montres de la famille ; rien ne sort de la maison.
+
+**1. Le courtier MQTT sur le NAS** (une fois) :
+
+```bash
+cd /home/eva/eva && docker compose --profile mqtt up -d eva-mqtt
+```
+
+**2. Flasher chaque ESP32 depuis le PC Windows** (sans rien installer, avec Chrome ou Edge) :
+1. Branche l'ESP32 en USB (câble de données, pas seulement de charge). S'il n'apparaît pas, installe le pilote USB de
+   la puce de la carte (CP210x ou CH340, souvent écrit sur la carte).
+2. Ouvre **https://espresense.com/firmware**, choisis la version **esp32** (ESP32-WROOM-32), clique *Connect*,
+   choisis le port COM, puis *Install*.
+3. L'ESP32 crée un wifi « espresense-… » : connecte-toi dessus avec ton téléphone, choisis le wifi de la maison et
+   donne-lui un **nom de pièce** (salon, bureau, cuisine…).
+
+**3. Régler chaque ESP32** : ouvre son adresse (affichée par ta box, ou http://espresense-<pièce>.local) :
+- *MQTT* : serveur = l'IP du NAS (ex. 192.168.1.10), port **1883**, sans utilisateur.
+- *Devices › Enroll* (sur un seul ESP32) : donne un nom (ex. « telephone-paul »), puis sur le téléphone ouvre le
+  Bluetooth et associe « ESPresense ». Le téléphone est désormais reconnu par tous les ESP32, même avec son adresse
+  Bluetooth qui change. Les montres et balises (Tile, Nut…) apparaissent souvent toutes seules.
+
+**4. Dans EVA** : Maison › Présence › *Pièce par pièce (ESP32)* › **Activer** (courtier : `eva-mqtt`, port 1883).
+Les appareils vus apparaissent : écris à qui est chacun (« Paul »). C'est fini.
+
+Conseils : un ESP32 au milieu de la pièce, à hauteur de table, loin des murs métalliques ; la distance affichée est
+approximative (le Bluetooth traverse les murs), c'est la pièce **la plus proche** qui compte. Si tu as déjà un courtier
+MQTT (celui de Home Assistant), mets son adresse à la place de `eva-mqtt`.

@@ -19,6 +19,7 @@ CORE = {
 
 # Outils qui ne changent rien (consultation). Tout autre outil — y compris un outil MCP ou inconnu — est une ACTION.
 LECTURE = {
+    "pratique_poubelles", "pratique_vacances", "pratique_carburants", "pratique_ephemeride", "pratique_actu", "inventaire_ou", "inventaire_prets",
     "ai_server_stats", "api_get", "api_search", "calendar_list", "dev_check", "device_list", "docker_logs", "docker_ps",
     "docs_search", "fs_grep", "fs_list", "fs_read", "fs_tree", "git_diff", "git_log", "git_status", "github_info", "gmail_read", "gmail_search",
     "ha_get", "ha_states", "list_show", "memoire_lister", "net_hosts", "net_probe", "note_list", "papiers_a_verifier",
@@ -32,7 +33,7 @@ _ECRITURE_FICHIER = re.compile(r"\b(fichiers?|[ée]cri\w*|enregistr\w*|sauvegard
 _PARLE_FICHIERS = re.compile(r"\b(fichiers?|dossiers?|r[ée]pertoires?|documents?|pdf|docx?|xlsx?|pptx?|csv|txt|workspace|uploads?|pi[èe]ces? jointes?|"
                              r"t[ée]l[ée]vers\w*|projets?|code|zip|fs_\w+)\b", re.I)
 _DOMAINES = ("recette_", "wiki_", "carnet_", "rappel_", "list_", "note_", "papiers_", "calendar_", "agenda_", "finances_", "contenu_",
-             "agent_", "routine_", "memoire_", "gmail_", "spotify_", "device_", "scene_", "tv_", "telephone_")
+             "agent_", "routine_", "memoire_", "gmail_", "spotify_", "device_", "scene_", "tv_", "telephone_", "pratique_", "inventaire_")
 AVERTISSEMENT = " ACTION : n'utilise cet outil que si la personne le demande dans son dernier message, jamais de ta propre initiative."
 
 
@@ -40,6 +41,13 @@ def est_lecture(name: str) -> bool:
     return name in LECTURE
 
 GROUPS: list[tuple[set[str], re.Pattern]] = [
+    ({"pratique_poubelles"}, re.compile(r"\b(poubelles?|d[ée]chets?|ramassages?|collecte|bacs?|tri s[ée]lectif|emballages|encombrants|ordures|verre)\b", re.I)),
+    ({"pratique_vacances"}, re.compile(r"\b(vacances|f[ée]ri[ée]s?|ponts?|rentr[ée]e|reprise de l.[ée]cole|toussaint|no[ëe]l|zone [abc])\b", re.I)),
+    ({"pratique_carburants"}, re.compile(r"\b(carburants?|essence|gazole|gasoil|diesel|sp ?95|sp ?98|e10|e85|gpl|stations?[- ]service|plein|prix du litre)\b", re.I)),
+    ({"pratique_ephemeride"}, re.compile(r"\b([ée]ph[ée]m[ée]ride|un jour comme aujourd.hui|ce jour[- ]l[àa] dans l.histoire|il y a \d+ ans aujourd.hui|que s.est[- ]il pass[ée] (?:un|le) \d*)", re.I)),
+    ({"pratique_actu"}, re.compile(r"\b(actu\w*|infos? du jour|titres?|nouvelles|journal|journaux|franceinfo|flash info|quoi de neuf dans le monde)\b", re.I)),
+    ({"inventaire_ou", "inventaire_ranger", "inventaire_preter", "inventaire_rendu", "inventaire_prets", "device_presence"},
+     re.compile(r"\b(o[uù] (?:est|sont|j.ai (?:mis|rang[ée])|on a (?:mis|rang[ée])|se trouve\w*)|rang[ée]\w*|range[rz]?|inventaire|pr[êe]t[ée]\w*|pr[êe]ts?|emprunt\w*|rendu\w*|rendre|qui a (?:ma|mon|mes)|tiroirs?|placards?|cellier|grenier|cave|[ée]tabli|on a encore des?|inventaire_\w+)\b", re.I)),
     ({"ai_server_stats"}, re.compile(r"\b(serveur ia|serveur d.ia|gpu|vram|carte graphique|temp[ée]rature|consommation|watts?|[ée]lectricit[ée]|stat\w*|dashboard|ai_server_stats)\b", re.I)),
     ({"code_run"}, re.compile(r"\b(code|coder|python|script|calcul\w*|compt\w*|additionn\w*|multipli\w*|somme|moyenne|pourcentage|ex[ée]cut\w*|programme|algorithme|stat\w*|convert\w*|code_run)\b|\d\s*[*+/x×-]\s*\d", re.I)),
     ({"gmail_search", "gmail_read", "gmail_send"}, re.compile(r"\b(mails?|e-?mails?|courriel\w*|gmail|bo[iî]te de r[ée]ception|inbox|message[s]? non lus?)\b", re.I)),

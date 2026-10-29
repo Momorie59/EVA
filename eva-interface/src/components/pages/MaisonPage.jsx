@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api";
 import { useAuth } from "../AuthGate";
 import MaisonDiscover from "./MaisonDiscover";
@@ -502,7 +502,7 @@ function PresenceTab({ admin }) {
     <div className="pj-grid">
       <div className="card" data-testid="presence-etat"><h3>Qui est à la maison ?</h3>
         <p className="page__sub">EVA regarde quels téléphones sont connectés au wifi (toutes les 2 minutes). Demande-lui « qui est à la maison ? ».</p>
-        {etat.length ? <ul className="pj-trash__list">{etat.map((p) => <li key={p.nom}>{p.present ? "🏠" : "🚶"} <b>{p.nom}</b> — {p.present ? "à la maison" : p.vu_il_y_a_min != null ? `parti(e) (vu il y a ${p.vu_il_y_a_min} min)` : "pas vu"}</li>)}</ul>
+        {etat.length ? <ul className="pj-trash__list">{etat.map((p) => <li key={p.nom}>{p.present ? "🏠" : "🚶"} <b>{p.nom}</b> — {p.present ? (p.piece ? `à la maison, ${p.piece.toLowerCase()}` : "à la maison") : p.vu_il_y_a_min != null ? `parti(e) (vu il y a ${p.vu_il_y_a_min} min)` : "pas vu"}</li>)}</ul>
           : <p className="page__sub">Personne n'est inscrit pour l'instant.</p>}
         {e.erreur && <p className="page__warn">{e.erreur}</p>}
       </div>
@@ -534,6 +534,47 @@ function PresenceTab({ admin }) {
           <Notice />
         </div>
       )}
+      {admin && !e.indisponible && <PresencePieces />}
+    </div>
+  );
+}
+
+// Présence pièce par pièce : un ESP32 par pièce avec le firmware libre ESPresense (Bluetooth), relié par MQTT. Voir MAISON.md.
+function PresencePieces() {
+  const [d, setD] = useState(null); const [c, setC] = useState(null); const [err, setErr] = useState("");
+  const charger = useCallback(() => api("/api/home/admin/espresense").then((x) => { setD(x); setC((v) => v || x.reglages); setErr(""); }).catch((x) => setErr(x.status === 404 ? "" : x.message)), []);
+  useEffect(() => { charger(); const t = setInterval(charger, 10000); return () => clearInterval(t); }, [charger]);
+  const enregistrer = (chg) => api("/api/home/admin/espresense", { method: "PUT", body: JSON.stringify({ ...c, ...chg }) }).then((x) => { setD(x); setC(x.reglages); }).catch((x) => setErr(x.message));
+  if (!d || !c) return err ? <p className="page__warn">{err}</p> : null;
+  const personnes = [...new Set(Object.values(c.appareils || {}))];
+  return (
+    <div className="card" data-testid="presence-pieces"><h3>Pièce par pièce (ESP32)</h3>
+      <p className="page__sub">Un ESP32 par pièce (firmware gratuit <b>ESPresense</b>) repère en Bluetooth les téléphones et montres de la famille : EVA sait alors <b>dans quelle pièce</b> est chacun (« où est Léa ? »), et dit les rappels sur le satellite de la pièce où tu es. Pas-à-pas : MAISON.md, « Présence pièce par pièce ».</p>
+      <label className="page__sub"><input type="checkbox" checked={!!c.actif} onChange={(ev) => enregistrer({ actif: ev.target.checked })} data-testid="esp-actif" /> Activer</label>
+      {c.actif && (
+        <>
+          <div className="routergrid">
+            <label className="field"><span>Courtier MQTT</span><input value={c.hote} onChange={(ev) => setC({ ...c, hote: ev.target.value })} placeholder="eva-mqtt" /></label>
+            <label className="field"><span>Port</span><input type="number" value={c.port} onChange={(ev) => setC({ ...c, port: ev.target.value })} /></label>
+            <label className="field"><span>Utilisateur (facultatif)</span><input value={c.utilisateur} onChange={(ev) => setC({ ...c, utilisateur: ev.target.value })} /></label>
+            <label className="field"><span>Mot de passe</span><input type="password" value={c.mot_de_passe} onChange={(ev) => setC({ ...c, mot_de_passe: ev.target.value })} /></label>
+          </div>
+          <div className="pj-row"><button className="btn" onClick={() => enregistrer({})}>Enregistrer</button>
+            <span className={d.etat.connecte ? "page__sub" : "page__warn"}>{d.etat.connecte ? `✅ Connecté au courtier · ${d.etat.messages} message(s) reçu(s) · pièces : ${d.etat.pieces_vues.join(", ") || "aucune encore"}` : d.etat.erreur || "⏳ Connexion au courtier…"}</span></div>
+          <span className="card__label" style={{ marginTop: 10 }}>Appareils vus par les ESP32</span>
+          {d.appareils.length === 0 ? <p className="page__sub">Aucun pour l'instant. Inscris les téléphones dans la page de chaque ESP32 (bouton « Enroll ») : ils apparaissent ici sous le nom donné.</p> : (
+            <ul className="pj-trash__list">{d.appareils.map((a) => (
+              <li key={a.id} className="pj-row"><span><b>{a.nom || a.id}</b> <small className="page__sub">{a.id} · {a.piece}, {a.distance} m · il y a {a.vu_il_y_a_s} s</small></span>
+                <input list="esp-personnes" value={c.appareils?.[a.id] || ""} placeholder="À qui ?" style={{ maxWidth: 160 }}
+                  onChange={(ev) => setC({ ...c, appareils: { ...(c.appareils || {}), [a.id]: ev.target.value } })}
+                  onBlur={() => enregistrer({})} data-testid={`esp-qui-${a.id}`} /></li>
+            ))}</ul>
+          )}
+          <datalist id="esp-personnes">{personnes.map((p) => <option key={p} value={p} />)}</datalist>
+          {Object.keys(d.pieces).length > 0 && <p className="page__sub">En ce moment : {Object.entries(d.pieces).map(([p, x]) => `${p} → ${x.piece.toLowerCase()}`).join(" · ")}</p>}
+        </>
+      )}
+      {err && <p className="page__warn">{err}</p>}
     </div>
   );
 }
@@ -757,6 +798,75 @@ function DiagnosticSatellite({ sat, onFermer }) {
   );
 }
 
+// Mode miroir : écran qui reconnaît la famille (visages appris ici), s'allume quand quelqu'un se présente.
+function MiroirTab({ admin }) {
+  const [e, setE] = useState(null); const [err, setErr] = useState(""); const [msg, setMsg] = useState("");
+  const [qui, setQui] = useState(""); const [prise, setPrise] = useState(0); const videoRef = useRef(null); const fluxRef = useRef(null);
+  const charger = useCallback(() => api("/api/miroir/etat").then((d) => { setE(d); setErr(""); }).catch((x) => setErr(x.status === 404 ? "Le mode miroir arrive avec la prochaine reconstruction d'eva-core." : x.message)), []);
+  useEffect(() => { charger(); }, [charger]);
+  useEffect(() => { if (!e?.telechargement?.en_cours) return undefined; const t = setInterval(charger, 3000); return () => clearInterval(t); }, [e?.telechargement?.en_cours, charger]);
+  useEffect(() => () => fluxRef.current?.getTracks().forEach((t) => t.stop()), []);
+  const telecharger = () => api("/api/miroir/modeles", { method: "POST" }).then(() => setTimeout(charger, 800)).catch((x) => setErr(x.message));
+  const apprendre = async () => {
+    setErr(""); setMsg("");
+    try {
+      const flux = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
+      fluxRef.current = flux; videoRef.current.srcObject = flux; await videoRef.current.play();
+      const images = []; const c = document.createElement("canvas");
+      for (let i = 0; i < 6; i++) {
+        setPrise(i + 1);
+        await new Promise((r) => setTimeout(r, 900));
+        c.width = videoRef.current.videoWidth; c.height = videoRef.current.videoHeight;
+        c.getContext("2d").drawImage(videoRef.current, 0, 0); images.push(c.toDataURL("image/jpeg", 0.85));
+      }
+      const r = await api("/api/miroir/visages", { method: "POST", body: JSON.stringify({ qui: qui || undefined, images }) });
+      setMsg(`✅ Visage de ${r.qui} appris (${r.photos} photo(s) retenue(s)). Il est reconnu dès maintenant par le miroir.`); charger();
+    } catch (x) { setErr(x.name === "NotAllowedError" ? "Caméra refusée : autorise-la dans le navigateur." : x.message); }
+    finally { setPrise(0); fluxRef.current?.getTracks().forEach((t) => t.stop()); fluxRef.current = null; }
+  };
+  const oublier = async (p) => { if (await confirmer(`Effacer le visage de ${p} ? Le miroir ne le reconnaîtra plus.`)) api(`/api/miroir/visages/${encodeURIComponent(p)}`, { method: "DELETE" }).then(charger).catch((x) => setErr(x.message)); };
+  const adresse = `${window.location.origin}/?miroir`;
+  if (!e) return err ? <p className="page__warn">{err}</p> : <p className="page__sub">Chargement…</p>;
+  return (
+    <div className="pj-grid">
+      <div className="card sat-carte" data-testid="miroir-tab">
+        <h3>Miroir intelligent</h3>
+        <p className="page__sub">Un écran (une vieille tablette, un PC avec webcam, un écran derrière un miroir sans tain) qui reconnaît la famille : il s'allume quand quelqu'un se présente, salue la personne, affiche <b>ses</b> infos (météo, agenda, colis, post-it) et on parle à EVA en disant « EVA… » ou en touchant l'écran. Plusieurs personnes ou un inconnu : rien de personnel n'est affiché. Personne : écran noir.</p>
+        <p className="page__sub">🔒 La reconnaissance se fait <b>sur le NAS</b>. Aucune image n'est gardée : seules les empreintes des visages appris ci-dessous (des nombres, pas des photos), effaçables à tout moment.</p>
+        {!e.modeles_prets && (
+          admin ? <p><button className="btn btn--primary" onClick={telecharger} disabled={e.telechargement.en_cours} data-testid="miroir-modeles">{e.telechargement.en_cours ? "Téléchargement…" : `Télécharger la reconnaissance des visages (${e.taille_mo} Mo, une fois)`}</button>
+            {e.telechargement.erreur && <span className="page__warn" style={{ display: "block" }}>{e.telechargement.erreur}</span>}</p>
+            : <p className="page__warn">L'administrateur doit d'abord activer la reconnaissance des visages (Maison › Miroir).</p>
+        )}
+        <div className="pj-row">
+          <button className="btn btn--primary" onClick={() => window.dispatchEvent(new Event("eva:miroir"))} data-testid="miroir-ouvrir">🪞 Ouvrir le miroir sur cet écran</button>
+          <button className="btn btn--ghost" onClick={() => navigator.clipboard?.writeText(adresse).then(() => setMsg(`Adresse copiée : ${adresse} — ouvre-la sur l'écran du miroir (en plein écran / mode kiosque), connecté avec un compte de la famille.`))}>📋 Adresse pour l'écran dédié</button>
+        </div>
+        {msg && <p className="page__sub" role="status">{msg}</p>}
+        {err && <p className="page__warn" role="alert">{err}</p>}
+      </div>
+      {e.modeles_prets && (
+        <div className="card">
+          <h3>Visages appris</h3>
+          {e.personnes.length ? (
+            <ul className="pj-trash__list">{e.personnes.map((p) => (
+              <li key={p.qui} className="pj-row"><span>🙂 <b>{p.qui}</b> · {p.photos} photo(s)</span>
+                {(admin || p.qui.toLowerCase() === (e.moi || "").toLowerCase()) && <button className="btn btn--ghost" onClick={() => oublier(p.qui)}>Effacer</button>}</li>
+            ))}</ul>
+          ) : <p className="page__sub">Aucun pour l'instant.</p>}
+          <span className="card__label" style={{ marginTop: 10 }}>Apprendre un visage</span>
+          <p className="page__sub">Seul(e) face à la caméra, bien éclairé(e) ; tourne un peu la tête pendant les 6 photos.</p>
+          <div className="pj-row">
+            {admin && <select value={qui} onChange={(x) => setQui(x.target.value)} data-testid="miroir-qui"><option value="">Moi</option>{e.comptes.map((c) => <option key={c} value={c}>{c}</option>)}</select>}
+            <button className="btn btn--primary" onClick={apprendre} disabled={!!prise} data-testid="miroir-apprendre">{prise ? `Photo ${prise} / 6…` : "📷 Apprendre"}</button>
+          </div>
+          <video ref={videoRef} muted playsInline style={{ display: prise ? "block" : "none", maxWidth: 320, borderRadius: 12, marginTop: 8, transform: "scaleX(-1)" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SatellitesTab() {
   const [st, setSt] = useState(null); const [f, setF] = useState(null); const [installer, setInstaller] = useState(null); const [retire, setRetire] = useState(null); const [diag, setDiag] = useState(null);
   const { call, Notice } = useCall();
@@ -835,7 +945,7 @@ export default function MaisonPage() {
   const auth = useAuth();
   const admin = !auth.required || auth.role === "admin";
   const [tab, setTab] = useState("devices");
-  const tabs = [["devices", "Appareils"], ["scenes", "Scènes"], ["routines", "Routines"], ["presence", "Présence"], ["printers", "Imprimantes"], ...(admin ? [["satellites", "Satellites"], ["network", "Réseau"]] : [])];
+  const tabs = [["devices", "Appareils"], ["scenes", "Scènes"], ["routines", "Routines"], ["presence", "Présence"], ["printers", "Imprimantes"], ["miroir", "Miroir"], ...(admin ? [["satellites", "Satellites"], ["network", "Réseau"]] : [])];
   return (
     <section className="page" data-testid="maison-page">
       <header className="page__header"><h1>Maison</h1><span className="page__sub">Appareils par pièce, scènes, imprimantes, réseau — EVA les pilote à la voix ou au texte.</span></header>
@@ -846,6 +956,7 @@ export default function MaisonPage() {
         {tab === "routines" && <RoutinesTab admin={admin} />}
         {tab === "presence" && <PresenceTab admin={admin} />}
         {tab === "printers" && <PrintersTab admin={admin} />}
+        {tab === "miroir" && <MiroirTab admin={admin} />}
         {tab === "satellites" && admin && <SatellitesTab />}
         {tab === "network" && admin && <NetworkTab />}
       </div>

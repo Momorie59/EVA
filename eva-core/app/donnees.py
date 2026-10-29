@@ -211,6 +211,10 @@ async def effacer(ws: Path, personne: str, compte: bool = False, acteur: str = "
         await rappels.effacer_de(qui)
         from . import lecons
         await lecons.effacer_de(qui)
+        from . import miroir
+        await miroir.oublier(qui)
+        from . import inventaire as inventaire_objets
+        await inventaire_objets.effacer_de(qui)             # ses objets privés                           # empreintes de son visage (mode miroir)
     except Exception:  # noqa: BLE001
         pass
     try:                                                    # ses recettes et leurs photos/vidéos

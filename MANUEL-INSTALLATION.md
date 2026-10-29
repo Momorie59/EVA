@@ -340,6 +340,7 @@ Guide complet : `https://192.168.1.10:8443/api/public/satellite/LISEZMOI.txt`.
 | Page « Erreur 502 » | EVA redémarre : attends 1 à 2 minutes, puis Ctrl+F5. Si ça dure : `docker logs eva-core --tail 40` |
 | Les conversations ont disparu | Recharge avec Ctrl+F5. Elles sont dans la base : `docker exec eva-db psql -U eva -d eva -c "SELECT count(*) FROM sessions;"` |
 | « Serveur IA injoignable » | Le serveur IA est-il allumé ? Teste : `docker exec eva-core python -c "import urllib.request;print(urllib.request.urlopen('http://192.168.1.20:11434/api/tags',timeout=5).read()[:200])"` |
+| « connexion temps réel (WebSocket) refusée » (réseau du bureau, hôtel) | Le proxy du réseau bloque les WebSocket : EVA passe toute seule en **mode compatible** (HTTP) au bout de quelques secondes ; le menu affiche « En ligne (mode compatible) ». Si le message reste : reconnecte-toi (session expirée). Le Salon (appels) a besoin des WebSocket et ne marche pas sur ces réseaux |
 | Une réponse tourne en boucle | Bouton rouge **■ Arrêter**. En dernier recours : `docker restart eva-core` |
 | Mot de passe perdu | `docker exec eva-db psql -U eva -d eva -c "DELETE FROM auth_users; DELETE FROM auth_sessions;" && docker restart eva-core`, puis recrée le compte |
 | Construction bloquée | Voir §3.4 (`--network=host`) |

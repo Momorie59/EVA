@@ -11,12 +11,13 @@ MODULES = {
     "wiki": {"label": "Wiki", "icon": "📚", "hint": "Pages de la famille (modes d'emploi, contacts, procédures…) et pages personnelles, avec historique. EVA s'en sert pour répondre."},
     "recettes": {"label": "Livre de recettes", "icon": "🍲", "hint": "Recettes avec photos, étapes et vidéos, belle mise en page, partage par lien ou PDF, liste de courses en un clic."},
     "finances": {"label": "Finances personnelles", "icon": "💶", "hint": "Comptes, relevés importés (CSV, OFX), catégories automatiques, budgets du mois. Strictement privé : chacun ne voit que ses finances, pas même l'administrateur."},
+    "inventaire": {"label": "Inventaire et prêts", "icon": "📦", "hint": "Où est rangée chaque chose (pièce › meuble › tiroir) et à qui on l'a prêtée : « où est la perceuse ? », « j'ai prêté la tondeuse à Paul »."},
     "contenus": {"label": "Suivi de contenus", "icon": "🎬", "hint": "Idées → brouillon → programmé → publié pour tes vidéos et publications (YouTube, Instagram, TikTok, Twitch…), calendrier de publication."},
 }
 # Ce que chaque module ouvre : adresses de l'API (coupées → 404) et préfixes de ses outils (retirés à EVA).
 _API = {"wiki": ("/api/wiki", "/api/public/wiki"), "recettes": ("/api/recettes", "/api/public/recettes"),
-        "finances": ("/api/finances",), "contenus": ("/api/contenus",)}
-_OUTILS = {"wiki": ("wiki_",), "recettes": ("recette_",), "finances": ("finances_",), "contenus": ("contenu_",)}
+        "finances": ("/api/finances",), "contenus": ("/api/contenus",), "inventaire": ("/api/inventaire",)}
+_OUTILS = {"wiki": ("wiki_",), "recettes": ("recette_",), "finances": ("finances_",), "contenus": ("contenu_",), "inventaire": ("inventaire_",)}
 
 
 def api_coupee(chemin: str) -> bool:

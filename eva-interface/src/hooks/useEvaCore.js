@@ -1,6 +1,9 @@
 import { record } from "../voice/latency";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CORE_URL, WS_URL, getToken, authHeaders } from "../urls";
+import HttpSocket from "../httpSocket";
+
+const TRANSPORT_KEY = "eva.transport";   // « http » : ce réseau bloque les WebSocket (retenu pour cet onglet)
 
 
 function buildWsUrl(sessionId) {
@@ -114,6 +117,8 @@ export function useEvaCore({ onReplyComplete, onToken, onAttente, onTurnComplete
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [connected, setConnected] = useState(false);
   const [offlineReason, setOfflineReason] = useState("connexion en cours…");
+  const [transport, setTransport] = useState("ws");
+  const echecsWsRef = useRef(0);
   const [lastModel, setLastModel] = useState(null);
   const [activity, setActivity] = useState(null); // tour en cours : {since, tool, done[]} — alimente l'indicateur « EVA réfléchit »
   const [scene, setScene] = useState(null); // présentation affichée en direct (diaporama, météo, heure…)
@@ -135,11 +140,15 @@ export function useEvaCore({ onReplyComplete, onToken, onAttente, onTurnComplete
   onTurnCompleteRef.current = onTurnComplete;
 
   const connect = useCallback(() => {
-    const socket = new WebSocket(buildWsUrl(sessionId));
+    // Transport : WebSocket d'abord ; si un proxy le bloque (serveur joignable mais WebSocket refusé deux fois de suite),
+    // conversation en HTTP ordinaire (httpSocket.js), retenue pour cet onglet.
+    const enHttp = (() => { try { return sessionStorage.getItem(TRANSPORT_KEY) === "http"; } catch { return false; } })();
+    const socket = enHttp ? new HttpSocket(sessionId) : new WebSocket(buildWsUrl(sessionId));
     socketRef.current = socket;
+    setTransport(enHttp ? "http" : "ws");
 
     let opened = false;
-    socket.onopen = () => { opened = true; setConnected(true); setOfflineReason(""); };
+    socket.onopen = () => { opened = true; echecsWsRef.current = 0; setConnected(true); setOfflineReason(""); };
 
     socket.onclose = (ev) => {
       // Refus avant ouverture (HTTP 403) : le navigateur ne donne pas de code, on fait vérifier la session.
@@ -149,9 +158,20 @@ export function useEvaCore({ onReplyComplete, onToken, onAttente, onTurnComplete
       setConnected(false);
       // On cherche POURQUOI c'est hors ligne : serveur arrêté, ou serveur là mais connexion temps réel refusée.
       fetch(`${CORE_URL}/api/health`, { cache: "no-store" })
-        .then((r) => setOfflineReason(r.ok
-          ? "le serveur répond mais la connexion temps réel (WebSocket) est refusée : session/jeton invalide ou proxy qui bloque /ws/chat"
-          : `le serveur répond une erreur ${r.status} (voir les journaux d'eva-core)`))
+        .then((r) => {
+          if (r.ok && !enHttp && !opened && ++echecsWsRef.current >= 2) {
+            // Serveur joignable, WebSocket refusé deux fois : proxy probable → on passe en HTTP tout de suite.
+            try { sessionStorage.setItem(TRANSPORT_KEY, "http"); } catch { /* ignoré */ }
+            clearTimeout(reconnectTimerRef.current);
+            setOfflineReason("réseau qui bloque les WebSocket : passage en mode compatible (HTTP)…");
+            reconnectTimerRef.current = setTimeout(connect, 300);
+            return;
+          }
+          setOfflineReason(r.ok
+            ? (enHttp ? "le serveur répond mais refuse la conversation : session ou jeton invalide (reconnecte-toi)"
+              : "le serveur répond mais la connexion temps réel (WebSocket) est refusée : session/jeton invalide ou proxy qui bloque /ws/chat")
+            : `le serveur répond une erreur ${r.status} (voir les journaux d'eva-core)`);
+        })
         .catch(() => setOfflineReason("EVA redémarre ou est arrêtée (normal pendant une mise à jour : 1 à 3 min) — si ça dure, lance bash diagnostic.sh"));
       // Nouvelle tentative dans 3s — utile pour les coupures réseau
       // ou si EVA CORE redémarre (ex: mise à jour du conteneur).
@@ -468,5 +488,5 @@ export function useEvaCore({ onReplyComplete, onToken, onAttente, onTurnComplete
   }, []);
 
   messagesRef.current = messages;
-  return { activity, evaState, setEvaState, scene, setScene, messages, sendMessage, stop, respondConfirm, respondQuestion, connected, offlineReason, lastModel, rateMessage };
+  return { activity, evaState, setEvaState, scene, setScene, messages, sendMessage, stop, respondConfirm, respondQuestion, connected, offlineReason, transport, lastModel, rateMessage };
 }

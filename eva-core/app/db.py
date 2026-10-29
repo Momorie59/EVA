@@ -278,6 +278,10 @@ async def init_db() -> None:
         await conn.execute(SCHEMA_LECONS)
         from .journal import SCHEMA as SCHEMA_JOURNAL
         await conn.execute(SCHEMA_JOURNAL)
+        from .miroir import SCHEMA as SCHEMA_MIROIR
+        await conn.execute(SCHEMA_MIROIR)
+        from .inventaire import SCHEMA as SCHEMA_INVENTAIRE
+        await conn.execute(SCHEMA_INVENTAIRE)
 
 
 async def close_db() -> None:

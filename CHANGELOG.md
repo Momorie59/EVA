@@ -3,6 +3,24 @@
 Format libre, pensé pour se relire vite en reprenant le sujet. Le plus
 récent en haut.
 
+## 2026-10-29 — Présence pièce par pièce avec des ESP32 (ESPresense)
+- Un ESP32 par pièce (firmware libre ESPresense, flashé depuis le navigateur) repère en Bluetooth les téléphones et montres de la famille ; EVA lit ces mesures en MQTT et sait **dans quelle pièce** est chacun : « qui est à la maison ? » → « Paul (bureau) », « où est Léa ? », et un rappel est dit sur le satellite de la pièce où se trouve la personne.
+- Maison › Présence › *Pièce par pièce (ESP32)* : activer, état du courtier, appareils vus, « à qui ? ». Courtier MQTT facultatif fourni (`docker compose --profile mqtt up -d eva-mqtt`, port 1883). Pas-à-pas dans MAISON.md.
+
+## 2026-10-29 — Infos pratiques et inventaire (d'après cornelius-modules et JPJR)
+- **Infos pratiques** (Paramètres › Services connectés) : **poubelles** (jours « en toutes lettres » : « mercredi semaines paires », « 1er vendredi du mois », rappel la veille au soir sur l'écran, Telegram et les satellites, tuile sur le miroir), **vacances scolaires et jours fériés** (Éducation nationale, zone A/B/C/Corse), **prix des carburants** (flux officiel, la station la moins chère d'une commune), **éphéméride** (Wikipédia), **titres de l'actualité** par flux RSS (franceinfo par défaut) — utilisés aussi pour « quoi de neuf ? » et le point du matin à la place d'une recherche web. Portage en Python de cornelius-modules (MIT, voir THIRD_PARTY_NOTICES.md).
+- **Inventaire et prêts** (module à activer, page Inventaire) : « où est la perceuse ? », « la perceuse est dans le garage, sur l'établi », « j'ai prêté la tondeuse à Paul jusqu'au 15 », « Paul me l'a rendue », prêts en retard, objets privés. Idée de JPJR, écrite pour EVA.
+- Laissés de côté (peu utiles ici) : vélos en libre-service, dernière vidéo YouTube, satellites ESP32 (à faire le jour où il y a la carte).
+
+## 2026-10-29 — Mode miroir (idée inspirée de Cornelius, écrite pour EVA)
+- **Maison › Miroir** : un écran (tablette, PC avec webcam, écran derrière un miroir sans tain) qui reconnaît la famille. Il s'allume quand quelqu'un se présente, salue la personne (option), affiche **ses** tuiles (météo, agenda, colis, post-it) et la dernière réponse d'EVA ; on parle avec « EVA… » ou en touchant l'écran ; option « écouter tout de suite quand quelqu'un de la famille arrive ». Plusieurs personnes ou un inconnu : mode discret. Personne pendant 45 s : écran noir (heure à peine visible).
+- Reconnaissance **sur le NAS** avec OpenCV (YuNet + SFace de l'OpenCV Zoo, 39 Mo téléchargés une fois et vérifiés par SHA-256). Aucune image gardée ; seules les empreintes des visages appris, effaçables par chacun (et par « Mes données »).
+- Ouverture : bouton dans Maison › Miroir, ou adresse `https://<NAS>:8443/?miroir` sur l'écran dédié (plein écran). Aucun code de Cornelius n'est repris (sa licence ne le permet pas).
+
+## 2026-10-29 — EVA depuis un réseau qui bloque les WebSocket (bureau)
+- Quand le serveur répond mais que la connexion temps réel (WebSocket) est refusée deux fois, l'interface passe toute seule en **mode compatible** : la même conversation (outils, accords, droits) en HTTP ordinaire, avec réception par « long polling ». Le pied du menu affiche « En ligne (mode compatible) ». Réglé pour l'onglet ; retour au WebSocket à la prochaine ouverture.
+- Côté EVA CORE : `/api/chat-http/…` (`chat_http.py`), qui branche un faux WebSocket sur exactement le même code que `/ws/chat`.
+
 ## 2026-10-28 — Revue : plugins, sécurité des fichiers, accords, erreurs, tests automatiques
 - **Plugins** (`PLUGINS.md`) : des outils ajoutés sans toucher au code, dans `plugins/` (monté en lecture seule : EVA ne peut pas les modifier), activés un par un dans Paramètres › Modules › Plugins. API stable `app/plugin_api.py` (version 1). Plugin d'exemple : tirage au sort.
 - **Liens symboliques** : la recherche, l'arborescence et les ZIP ne suivent plus jamais un lien symbolique ; le téléchargement vérifie aussi le droit sur le vrai fichier visé.

@@ -120,11 +120,19 @@ async def automatismes() -> str | None:
 async def etat() -> dict:
     now = time.time()
     out = []
+    try:                                                    # pièce de chacun, si des ESP32 (ESPresense) sont installés
+        from . import espresense
+        pieces = await espresense.pieces_famille()
+    except Exception:  # noqa: BLE001
+        pieces = {}
     for nom, conf in (await reglages())["personnes"].items():
         ts = max((_vus.get(m, {}).get("ts", 0) for m in conf["macs"]), default=0)
-        out.append({"nom": nom, "present": bool(ts) and now - ts < ABSENT_APRES_S,
-                    "vu_il_y_a_min": round((now - ts) / 60) if ts else None})
-    return {"personnes": out, "dernier_scan": _etat["dernier_scan"] or None, "erreur": _etat["erreur"]}
+        p = pieces.pop(nom, None)
+        out.append({"nom": nom, "present": (bool(ts) and now - ts < ABSENT_APRES_S) or bool(p),
+                    "vu_il_y_a_min": round((now - ts) / 60) if ts else (0 if p else None), "piece": p["piece"] if p else None})
+    for nom, p in pieces.items():                           # vu par un ESP32 sans téléphone inscrit pour le wifi
+        out.append({"nom": nom, "present": True, "vu_il_y_a_min": 0, "piece": p["piece"]})
+    return {"personnes": out, "dernier_scan": _etat["dernier_scan"] or None, "erreur": _etat["erreur"] if not pieces else ""}
 
 
 def appareils_vus() -> list[dict]:
@@ -136,7 +144,7 @@ def appareils_vus() -> list[dict]:
 def phrase(e: dict) -> str:
     if not e["personnes"]:
         return "Personne n'est encore inscrit pour la présence (Maison › Présence)."
-    la = [p["nom"] for p in e["personnes"] if p["present"]]
+    la = [p["nom"] + (f" ({p['piece'].lower()})" if p.get("piece") else "") for p in e["personnes"] if p["present"]]
     pas = [p["nom"] for p in e["personnes"] if not p["present"]]
     if not la:
         return "Personne n'est à la maison en ce moment (aucun téléphone inscrit n'est sur le wifi)."
